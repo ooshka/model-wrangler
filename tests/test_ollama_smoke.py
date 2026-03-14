@@ -57,19 +57,62 @@ class ParsePlannerJsonContentTests(unittest.TestCase):
 
 
 class ValidatePlannerPayloadTests(unittest.TestCase):
-    def test_rejects_missing_rationale(self) -> None:
-        with self.assertRaisesRegex(
-            RuntimeError,
-            "Planner JSON response missing 'rationale'.",
-        ):
-            validate_planner_payload({"actions": []})
-
     def test_rejects_empty_actions(self) -> None:
         with self.assertRaisesRegex(
             RuntimeError,
             "Planner JSON response 'actions' must not be empty.",
         ):
             validate_planner_payload({"rationale": "Because", "actions": []})
+
+    def test_accepts_missing_rationale(self) -> None:
+        self.assertEqual(
+            validate_planner_payload(
+                {
+                    "actions": [
+                        {"action": "notes.read", "reason": "inspect", "params": {"path": "notes/today.md"}}
+                    ]
+                }
+            )["rationale"],
+            None,
+        )
+
+    def test_accepts_blank_rationale_by_normalizing_to_none(self) -> None:
+        self.assertEqual(
+            validate_planner_payload(
+                {
+                    "rationale": "   ",
+                    "actions": [
+                        {"action": "notes.read", "params": {"path": "notes/today.md"}}
+                    ],
+                }
+            )["rationale"],
+            None,
+        )
+
+    def test_accepts_blank_reason_and_missing_params_by_normalizing_them(self) -> None:
+        self.assertEqual(
+            validate_planner_payload(
+                {
+                    "rationale": "Because",
+                    "actions": [
+                        {
+                            "action": "notes.read",
+                            "reason": "   ",
+                        }
+                    ],
+                }
+            ),
+            {
+                "rationale": "Because",
+                "actions": [
+                    {
+                        "action": "notes.read",
+                        "reason": None,
+                        "params": {},
+                    }
+                ],
+            },
+        )
 
     def test_rejects_invalid_action_params(self) -> None:
         with self.assertRaisesRegex(

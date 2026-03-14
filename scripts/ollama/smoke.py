@@ -198,14 +198,12 @@ def parse_planner_json_content(content: str) -> dict:
 
 
 def validate_planner_payload(payload: dict) -> dict:
-    if "rationale" not in payload:
-        raise RuntimeError("Planner JSON response missing 'rationale'.")
     if "actions" not in payload:
         raise RuntimeError("Planner JSON response missing 'actions'.")
 
-    rationale = payload["rationale"]
-    if not isinstance(rationale, str) or not rationale.strip():
-        raise RuntimeError("Planner JSON response 'rationale' must be a non-empty string.")
+    rationale = payload.get("rationale")
+    if rationale is not None and not isinstance(rationale, str):
+        raise RuntimeError("Planner JSON response 'rationale' must be a string when present.")
 
     actions = payload["actions"]
     if not isinstance(actions, list):
@@ -227,13 +225,13 @@ def validate_planner_payload(payload: dict) -> dict:
             )
 
         reason = action.get("reason")
-        if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+        if reason is not None and not isinstance(reason, str):
             raise RuntimeError(
                 f"Planner JSON action at index {index} has an invalid 'reason'."
             )
 
         params = action.get("params")
-        if not isinstance(params, dict):
+        if params is not None and not isinstance(params, dict):
             raise RuntimeError(
                 f"Planner JSON action at index {index} must include object 'params'."
             )
@@ -241,13 +239,13 @@ def validate_planner_payload(payload: dict) -> dict:
         normalized_actions.append(
             {
                 "action": name.strip(),
-                "reason": None if reason is None else reason.strip(),
-                "params": params,
+                "reason": None if reason is None or not reason.strip() else reason.strip(),
+                "params": params or {},
             }
         )
 
     return {
-        "rationale": rationale.strip(),
+        "rationale": None if rationale is None or not rationale.strip() else rationale.strip(),
         "actions": normalized_actions,
     }
 
