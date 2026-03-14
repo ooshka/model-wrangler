@@ -180,6 +180,132 @@ def run_chat_smoke(config: dict[str, str]) -> dict:
     }
 
 
+def parse_planner_json_content(content: str) -> dict:
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Planner JSON response missing message content.")
+
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            "Planner JSON response was not valid JSON."
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("Planner JSON response must be a JSON object.")
+
+    return payload
+
+
+def validate_planner_payload(payload: dict) -> dict:
+    if "rationale" not in payload:
+        raise RuntimeError("Planner JSON response missing 'rationale'.")
+    if "actions" not in payload:
+        raise RuntimeError("Planner JSON response missing 'actions'.")
+
+    rationale = payload["rationale"]
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise RuntimeError("Planner JSON response 'rationale' must be a non-empty string.")
+
+    actions = payload["actions"]
+    if not isinstance(actions, list):
+        raise RuntimeError("Planner JSON response 'actions' must be an array.")
+    if not actions:
+        raise RuntimeError("Planner JSON response 'actions' must not be empty.")
+
+    normalized_actions: list[dict] = []
+    for index, action in enumerate(actions):
+        if not isinstance(action, dict):
+            raise RuntimeError(
+                f"Planner JSON action at index {index} must be an object."
+            )
+
+        name = action.get("action")
+        if not isinstance(name, str) or not name.strip():
+            raise RuntimeError(
+                f"Planner JSON action at index {index} is missing a non-empty 'action' string."
+            )
+
+        reason = action.get("reason")
+        if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+            raise RuntimeError(
+                f"Planner JSON action at index {index} has an invalid 'reason'."
+            )
+
+        params = action.get("params")
+        if not isinstance(params, dict):
+            raise RuntimeError(
+                f"Planner JSON action at index {index} must include object 'params'."
+            )
+
+        normalized_actions.append(
+            {
+                "action": name.strip(),
+                "reason": None if reason is None else reason.strip(),
+                "params": params,
+            }
+        )
+
+    return {
+        "rationale": rationale.strip(),
+        "actions": normalized_actions,
+    }
+
+
+def run_planner_json_smoke(config: dict[str, str]) -> dict:
+    prompt_payload = {
+        "intent": "Prepare the next local_llm planner validation step.",
+        "context": {
+            "project": "local_llm",
+            "constraints": [
+                "work only inside local_llm",
+                "preserve current Ollama baseline",
+                "keep the slice small and testable",
+            ],
+        },
+    }
+    payload = {
+        "model": config["OLLAMA_CHAT_MODEL"],
+        "stream": False,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Return only JSON with keys rationale and actions. "
+                    "Actions must be an array of objects with action, reason, and params."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(prompt_payload),
+            },
+        ],
+    }
+    response = request_json(
+        f"{config['OLLAMA_OPENAI_BASE_URL'].rstrip('/')}/chat/completions",
+        payload,
+        headers={"Authorization": f"Bearer {config['OLLAMA_API_KEY']}"},
+    )
+
+    choices = response.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError(f"Planner JSON response missing choices: {response}")
+
+    message = choices[0].get("message", {})
+    content = message.get("content", "")
+    parsed = parse_planner_json_content(content)
+    validated = validate_planner_payload(parsed)
+    first_action = validated["actions"][0]["action"]
+
+    return {
+        "model": response.get("model", config["OLLAMA_CHAT_MODEL"]),
+        "rationale_preview": validated["rationale"].replace("\n", " ")[:160],
+        "action_count": len(validated["actions"]),
+        "first_action": first_action,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the local Ollama smoke path from WSL2.",
@@ -193,6 +319,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--print-config",
         action="store_true",
         help="Print the effective non-secret config and exit.",
+    )
+    parser.add_argument(
+        "--planner-json-only",
+        action="store_true",
+        help="Run only the strict planner JSON smoke path.",
     )
     return parser
 
@@ -227,9 +358,13 @@ def main() -> int:
 
         if args.check_only:
             result["status"] = "runtime-ready"
+        elif args.planner_json_only:
+            result["planner_json"] = run_planner_json_smoke(config)
+            result["status"] = "planner-json-passed"
         else:
             result["embeddings"] = run_embeddings_smoke(config)
             result["chat"] = run_chat_smoke(config)
+            result["planner_json"] = run_planner_json_smoke(config)
             result["status"] = "smoke-passed"
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
