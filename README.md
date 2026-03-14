@@ -85,7 +85,11 @@ WSL2 workflow:
    ```bash
    python3 scripts/ollama/smoke.py --check-only
    ```
-4. Run the full smoke path for embeddings plus planner-style chat:
+4. Run the strict planner JSON smoke path that mirrors `mirai`'s current workflow planner object shape:
+   ```bash
+   python3 scripts/ollama/smoke.py --planner-json-only
+   ```
+5. Run the full smoke path for embeddings, planner-style chat, and strict planner JSON:
    ```bash
    python3 scripts/ollama/smoke.py
    ```

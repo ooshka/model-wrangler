@@ -47,6 +47,8 @@ WSL2 verification commands:
   - `python3 -m unittest tests.test_ollama_smoke`
 - Runtime and model presence:
   - `python3 scripts/ollama/smoke.py --check-only`
+- Planner JSON contract smoke:
+  - `python3 scripts/ollama/smoke.py --planner-json-only`
 - Full smoke path:
   - `python3 scripts/ollama/smoke.py`
 
@@ -56,9 +58,11 @@ Agent note:
 
 Expected result:
 - `--check-only` returns JSON with `"status": "runtime-ready"`.
-- The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions and a chat preview.
+- `--planner-json-only` returns JSON with `"status": "planner-json-passed"` plus planner action count and first action name.
+- The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions, a chat preview, and planner JSON summary fields.
 
 Failure modes to report:
 - `127.0.0.1:11434` unreachable from WSL2.
 - One or both baseline models missing from the Windows-hosted Ollama instance.
+- Planner JSON responses that are non-JSON, omit `rationale` or `actions`, or return invalid action payload types.
 - Chat or embeddings requests returning non-JSON or empty payloads.
