@@ -4,9 +4,13 @@ Lightweight planning artifacts for incremental, agent-executable work in `local_
 
 ## Structure
 - `cases/`: executable case files
+- `contracts/`: local provider contract notes used before `mirai` adapter work
 - `plans/backlog.md`: prioritized candidate slices
 - `plans/roadmap.md`: short directional roadmap
 - `testing/README.md`: testing infrastructure and verification commands for agents
+
+Current contract note:
+- `contracts/local_retrieval_artifact_contract.md`: minimum ranked chunk/result shape expected from the first local retrieval path
 
 ## Scope
 
