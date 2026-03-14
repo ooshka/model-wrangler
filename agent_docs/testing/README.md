@@ -11,6 +11,7 @@ Pick the narrowest verification that matches the change, then report exactly wha
 - This repository is currently documentation-first.
 - No application runtime or automated test suite has been established yet.
 - Until code lands, docs-only changes typically require no automated verification.
+- The current intended runtime split is: repo in WSL2, local model server on Windows.
 
 ## Expected Near-Term Upkeep
 
@@ -18,6 +19,7 @@ As local runtime scripts, config, or evaluation code are added:
 - document the canonical setup command
 - document the smallest smoke-test command
 - document any required model/runtime prerequisites
+- document whether the command should run in WSL2 or on the Windows host
 - note when sandbox escalation or network access is required
 
 ## Minimal Command Selection by Change Type
