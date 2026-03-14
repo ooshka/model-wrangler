@@ -2,9 +2,9 @@
 
 ## Now
 
-1. DMR Provider Baseline
+1. Ollama Provider Baseline
 - Type: `feature`
-- Value: proves the local workstation can run the first chat and embedding models behind a repeatable Docker Model Runner workflow.
+- Value: proves the local workstation can run the first chat and embedding models behind a repeatable Windows-hosted Ollama workflow consumed from WSL2.
 - Size: ~1 day.
 
 2. Embeddings Smoke Path
@@ -38,7 +38,7 @@
 
 1. Vector Index Choice + Benchmark
 - Type: `feature`
-- Value: chooses the first local vector store/index path using measured fit for the DMR embeddings workflow.
+- Value: chooses the first local vector store/index path using measured fit for the Ollama embeddings workflow.
 - Size: ~1-2 days.
 
 2. Local Provider Parity Fixture Pack

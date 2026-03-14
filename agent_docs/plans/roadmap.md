@@ -5,7 +5,7 @@
 This project is the local-model proving ground for `mirai`'s self-hosted provider phase. The near-term goal is not broad model experimentation; it is a reproducible local stack for RAG and planning workflows that preserves `mirai`'s existing provider seams and contract discipline.
 
 High-level goal:
-- Deliver a Docker Model Runner based local workflow for embeddings and planner-style generation that can later plug into `mirai` without changing MCP endpoint semantics.
+- Deliver an Ollama-based local workflow for embeddings and planner-style generation that can later plug into `mirai` without changing MCP endpoint semantics.
 
 Project boundaries:
 - Preserve `mirai` as the owner of MCP contracts, safety policy, and endpoint semantics.
@@ -15,8 +15,8 @@ Project boundaries:
 
 ## Delivery Path
 
-1. DMR local provider baseline
-- Stand up a repeatable Docker Model Runner workflow on the target workstation.
+1. Ollama local provider baseline
+- Stand up a repeatable Ollama workflow on the target workstation, with the runtime hosted on Windows and repo tooling kept in WSL2.
 - Prove one chat/generation model and one embedding model can be invoked through stable local commands and documented config.
 
 2. Embeddings-first RAG foundation
@@ -41,6 +41,6 @@ Project boundaries:
 
 ## Near-Term Success Criteria
 
-- A documented DMR setup runs locally with the expected model names and hardware assumptions.
+- A documented Ollama setup runs locally with the expected model names, host/WSL split, and hardware assumptions.
 - The repo contains a repeatable smoke path for local embeddings and planner-style generation calls.
 - Roadmap follow-ons are feature-led: local provider capability first, hardening and parity checks immediately after.
