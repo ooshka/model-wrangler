@@ -16,3 +16,8 @@
 - Impact: orchestration experiments may overfit to prompt hacks or model-specific behavior.
 - Trigger: once the first planner model is callable locally.
 - Planned handling: add a bounded planner JSON smoke slice and parity fixtures before treating local planning as integration-ready.
+
+4. Windows host bootstrap is still manual
+- Impact: initial agent validation depends on Ollama being installed, running, and preloaded with the baseline models outside the repo.
+- Trigger: when a fresh workstation or CI-like environment needs to reproduce the local baseline without prior host setup.
+- Planned handling: consider a small host setup note or helper script once the first Ollama baseline smoke path is stable.

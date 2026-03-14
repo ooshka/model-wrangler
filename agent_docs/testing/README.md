@@ -30,3 +30,35 @@ As local runtime scripts, config, or evaluation code are added:
   - Add at least one documented smoke command here.
 - New evaluation harness or comparison code:
   - Add the narrowest reproducible verification command here before merging follow-on work.
+
+## Current Ollama Baseline Verification
+
+Windows host preconditions:
+- Ollama installed and running on Windows.
+- WSL2 mirrored networking enabled so the Windows localhost endpoint is reachable from WSL2 at `127.0.0.1`.
+- Baseline models pulled on Windows:
+  - `ollama pull qwen3:8b`
+  - `ollama pull all-minilm`
+
+WSL2 verification commands:
+- Config sanity:
+  - `python3 scripts/ollama/smoke.py --print-config`
+- Smoke helper unit test:
+  - `python3 -m unittest tests.test_ollama_smoke`
+- Runtime and model presence:
+  - `python3 scripts/ollama/smoke.py --check-only`
+- Full smoke path:
+  - `python3 scripts/ollama/smoke.py`
+
+Agent note:
+- Local HTTP checks against the Windows-hosted Ollama runtime may require sandbox escalation in Codex even though they do not use the public internet.
+- The default smoke config assumes `http://127.0.0.1:11434` from WSL2. Only add `config/ollama.env` overrides if this workstation uses a different Windows host address.
+
+Expected result:
+- `--check-only` returns JSON with `"status": "runtime-ready"`.
+- The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions and a chat preview.
+
+Failure modes to report:
+- `127.0.0.1:11434` unreachable from WSL2.
+- One or both baseline models missing from the Windows-hosted Ollama instance.
+- Chat or embeddings requests returning non-JSON or empty payloads.
