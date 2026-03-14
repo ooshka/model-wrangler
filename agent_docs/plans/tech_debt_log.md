@@ -12,10 +12,10 @@
 - Trigger: after the first embeddings smoke path lands.
 - Planned handling: write a small retrieval artifact contract note before choosing a vector index or starting provider integration work.
 
-3. Strict JSON planner reliability is unproven locally
-- Impact: orchestration experiments may overfit to prompt hacks or model-specific behavior because the current baseline only proves freeform chat, not structured planner output.
-- Trigger: active now; the first planner model is callable locally through the Ollama smoke path.
-- Planned handling: validate the core workflow planner JSON shape in a bounded smoke slice first, then add parity fixtures only if the smoke path shows promising stability.
+3. Planner reliability beyond single-smoke coverage is still unproven locally
+- Impact: one successful structured-output smoke path does not yet establish behavior across varied intents, larger contexts, or fallback scenarios.
+- Trigger: becomes important once `mirai` adapter work or parity-fixture work is about to begin.
+- Planned handling: keep the current planner JSON smoke as the baseline proof, then add parity fixtures or broader reliability checks only when they unblock concrete integration work.
 
 4. Windows host bootstrap is still manual
 - Impact: initial agent validation depends on Ollama being installed, running, and preloaded with the baseline models outside the repo.
