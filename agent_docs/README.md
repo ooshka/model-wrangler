@@ -11,6 +11,7 @@ Lightweight planning artifacts for incremental, agent-executable work in `local_
 
 Current contract note:
 - `contracts/local_retrieval_artifact_contract.md`: minimum ranked chunk/result shape expected from the first local retrieval path
+- `contracts/mirai_integration_constraints.md`: current `mirai` retrieval query contract and adapter-boundary expectations `local_llm` should preserve
 
 ## Scope
 
