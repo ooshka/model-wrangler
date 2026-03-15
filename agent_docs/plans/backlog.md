@@ -1,18 +1,20 @@
 # Backlog
 
-## Next
+## Now
 
 1. Mirai Integration Constraints Note
 - Type: `docs`
-- Value: records the exact provider-facing contracts `local_llm` must preserve when integration work starts.
+- Value: records the exact provider-facing contracts `local_llm` must preserve now that `mirai` has tightened early-stage contract ownership, including the current retrieval query metadata shape and provider-boundary expectations.
 - Size: ~0.5 day.
 
-2. Vector Index Choice + Benchmark
+## Next
+
+1. Vector Index Choice + Benchmark
 - Type: `feature`
 - Value: chooses the first local vector store/index path using measured fit for the Ollama embeddings workflow.
 - Size: ~1-2 days.
 
-3. Reranker Evaluation Slice
+2. Reranker Evaluation Slice
 - Type: `feature`
 - Value: tests whether a small reranker materially improves result ordering enough to justify the extra moving part.
 - Size: ~0.5-1 day.
