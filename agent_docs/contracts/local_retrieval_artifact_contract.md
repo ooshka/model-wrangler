@@ -16,6 +16,7 @@ It is intentionally narrow:
 - policy and safety behavior
 - error mapping and transport responses
 - top-level response envelope fields such as `query` and `limit`
+- public query chunk shaping such as wrapping grounding data under `metadata`
 
 This note is only about the ranked chunk records the local retrieval path should be able to produce consistently.
 
@@ -63,7 +64,7 @@ When `snippet_offset` is present, it should use:
 
 ## Boundary With `mirai`
 
-The current observable `mirai` retrieval response shape adds envelope fields around ranked chunks:
+The current observable `mirai` retrieval response shape adds envelope fields and a public grounding wrapper around ranked chunks:
 
 ```json
 {
@@ -71,19 +72,22 @@ The current observable `mirai` retrieval response shape adds envelope fields aro
   "limit": 5,
   "chunks": [
     {
-      "path": "root.md",
-      "chunk_index": 0,
       "content": "alpha beta",
       "score": 1,
-      "snippet_offset": {"start": 0, "end": 5}
+      "metadata": {
+        "path": "root.md",
+        "chunk_index": 0,
+        "snippet_offset": {"start": 0, "end": 5}
+      }
     }
   ]
 }
 ```
 
 For local planning purposes:
-- `local_llm` should target the chunk object shape inside `chunks`
-- `mirai` should continue to own the envelope, request validation, and error response contract
+- `local_llm` should target the provider-side chunk artifact shape defined above, not the nested `metadata` wrapper used by `mirai`'s public query contract
+- `mirai` should continue to own the envelope, query response shaping, request validation, and error response contract
+- see [mirai_integration_constraints.md](./mirai_integration_constraints.md) for the current adapter-facing contract summary
 
 ## Explicitly Deferred
 

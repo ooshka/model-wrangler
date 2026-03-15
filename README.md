@@ -36,6 +36,7 @@ Project planning artifacts live under `agent_docs/`.
 - `agent_docs/plans/roadmap.md`: short directional roadmap
 - `agent_docs/plans/backlog.md`: candidate near-term slices
 - `agent_docs/testing/README.md`: verification guidance for agents and contributors
+- `agent_docs/contracts/mirai_integration_constraints.md`: current `mirai` retrieval query contract notes that local-provider work should preserve
 
 ## Local Runtime Direction
 
