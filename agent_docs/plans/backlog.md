@@ -1,12 +1,5 @@
 # Backlog
 
-## Now
-
-1. Mirai Integration Constraints Note
-- Type: `docs`
-- Value: records the exact provider-facing contracts `local_llm` must preserve now that `mirai` has tightened early-stage contract ownership, including the current retrieval query metadata shape and provider-boundary expectations.
-- Size: ~0.5 day.
-
 ## Next
 
 1. Vector Index Choice + Benchmark
