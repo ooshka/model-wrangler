@@ -1,12 +1,5 @@
 # Backlog
 
-## Now
-
-1. Local Retrieval Artifact Contract Note
-- Type: `docs`
-- Value: records the chunk, metadata, and fallback expectations needed before vector-index or `mirai` seam work begins.
-- Size: ~0.5-1 day.
-
 ## Next
 
 1. Mirai Integration Constraints Note
