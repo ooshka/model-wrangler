@@ -15,7 +15,7 @@
 3. ANN upgrade threshold is not measured yet
 - Impact: the team could either over-engineer a vector backend too early or cling to exact search after it stops fitting the workstation envelope.
 - Trigger: once the first retrieval baseline is implemented and can be timed against a representative local note set.
-- Planned handling: capture build/query latency plus corpus-size notes in the retrieval benchmark follow-up before considering Faiss/HNSW or a service-backed store.
+- Planned handling: use the canonical SQLite benchmark command to capture `chunk_count`, `note_count`, `artifact_bytes`, `build_seconds`, and `query_seconds`, then revisit ANN or a service-backed store when repeated representative runs exceed roughly `0.100s` query time, `1.000s` build time, or workstation-scale artifact/corpus bounds.
 
 4. Planner reliability beyond single-smoke coverage is still unproven locally
 - Impact: one successful structured-output smoke path does not yet establish behavior across varied intents, larger contexts, or fallback scenarios.

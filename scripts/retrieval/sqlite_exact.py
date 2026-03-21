@@ -268,6 +268,9 @@ def run_benchmark(
     return {
         "database_path": str(Path(db_path)),
         "chunk_count": index.count_chunks(),
+        "note_count": len({chunk.path for chunk in chunks}),
+        "embedding_dimensions": len(query_embedding),
+        "artifact_bytes": Path(db_path).stat().st_size if Path(db_path).exists() else 0,
         "inserted_count": inserted,
         "limit": limit,
         "build_seconds": round(build_seconds, 6),

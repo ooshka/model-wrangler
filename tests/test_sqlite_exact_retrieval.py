@@ -168,6 +168,9 @@ class RunBenchmarkTests(unittest.TestCase):
             )
 
         self.assertEqual(result["chunk_count"], 1)
+        self.assertEqual(result["note_count"], 1)
+        self.assertEqual(result["embedding_dimensions"], 2)
+        self.assertGreater(result["artifact_bytes"], 0)
         self.assertEqual(result["inserted_count"], 1)
         self.assertEqual(result["limit"], 1)
         self.assertIn("build_seconds", result)
@@ -209,6 +212,7 @@ class RunBenchmarkTests(unittest.TestCase):
             )
 
         self.assertEqual(result["chunk_count"], 1)
+        self.assertEqual(result["note_count"], 1)
         self.assertEqual(
             result["top_result"],
             {"path": "notes/fresh.md", "chunk_index": 0, "score": 1.0},
@@ -248,6 +252,9 @@ class RunBenchmarkTests(unittest.TestCase):
 
         self.assertEqual(first["chunk_count"], 1)
         self.assertEqual(second["chunk_count"], 2)
+        self.assertEqual(second["note_count"], 1)
+        self.assertEqual(second["embedding_dimensions"], 2)
+        self.assertGreater(second["artifact_bytes"], 0)
         self.assertFalse(second["reset"])
 
 
