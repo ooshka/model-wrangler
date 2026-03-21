@@ -7,6 +7,7 @@ from scripts.retrieval.sqlite_exact import (
     ChunkRecord,
     SQLiteExactIndex,
     run_benchmark,
+    run_retrieval_parity_fixture,
     run_rerank_evaluation,
 )
 
@@ -341,6 +342,118 @@ class FixtureCompatibilityTests(unittest.TestCase):
 
         serialized = json.dumps(payload)
         self.assertIn("query_embedding", serialized)
+
+    def test_retrieval_parity_fixture_reports_expected_summary(self) -> None:
+        fixture_payload = {
+            "chunks": [
+                {
+                    "path": "notes/summary.md",
+                    "chunk_index": 0,
+                    "content": "Weekly planning recap with action items and owner notes.",
+                    "embedding": [1.0, 0.0, 0.0],
+                },
+                {
+                    "path": "notes/today.md",
+                    "chunk_index": 0,
+                    "content": "Alpha budget decisions and alpha budget follow-up tasks for today.",
+                    "embedding": [0.92, 0.08, 0.0],
+                },
+            ],
+            "query_embedding": [1.0, 0.0, 0.0],
+            "query_text": "alpha budget",
+            "limit": 2,
+            "expected": {
+                "changed_top_result": True,
+                "changed_ranking": True,
+                "baseline_results": [
+                    {
+                        "path": "notes/summary.md",
+                        "chunk_index": 0,
+                        "score": 1.0,
+                        "matched_term_count": 0,
+                    },
+                    {
+                        "path": "notes/today.md",
+                        "chunk_index": 0,
+                        "score": 0.996241,
+                        "matched_term_count": 2,
+                    },
+                ],
+                "reranked_results": [
+                    {
+                        "path": "notes/today.md",
+                        "chunk_index": 0,
+                        "score": 0.996241,
+                        "matched_term_count": 2,
+                    },
+                    {
+                        "path": "notes/summary.md",
+                        "chunk_index": 0,
+                        "score": 1.0,
+                        "matched_term_count": 0,
+                    },
+                ],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            fixture_path = Path(tempdir) / "retrieval_parity.json"
+            fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
+            result = run_retrieval_parity_fixture(
+                Path(tempdir) / "parity.sqlite3",
+                fixture_path,
+            )
+
+        self.assertEqual(result["mode"], "retrieval_parity_fixture")
+        self.assertEqual(result["status"], "parity-fixture-passed")
+        self.assertTrue(result["changed_top_result"])
+
+    def test_retrieval_parity_fixture_raises_on_expected_mismatch(self) -> None:
+        fixture_payload = {
+            "chunks": [
+                {
+                    "path": "notes/sample.md",
+                    "chunk_index": 0,
+                    "content": "alpha beta",
+                    "embedding": [1.0, 0.0],
+                }
+            ],
+            "query_embedding": [1.0, 0.0],
+            "query_text": "alpha",
+            "limit": 1,
+            "expected": {
+                "changed_top_result": False,
+                "changed_ranking": False,
+                "baseline_results": [
+                    {
+                        "path": "notes/sample.md",
+                        "chunk_index": 0,
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                    }
+                ],
+                "reranked_results": [
+                    {
+                        "path": "notes/sample.md",
+                        "chunk_index": 0,
+                        "score": 0.5,
+                        "matched_term_count": 1,
+                    }
+                ],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            fixture_path = Path(tempdir) / "retrieval_parity_bad.json"
+            fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "baseline_results did not match expected output",
+            ):
+                run_retrieval_parity_fixture(
+                    Path(tempdir) / "parity.sqlite3",
+                    fixture_path,
+                )
 
 
 if __name__ == "__main__":
