@@ -69,6 +69,7 @@ Expected result:
 - The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions, a chat preview, and planner JSON summary fields.
 - The retrieval unit test passes with deterministic ranking and contract-shape checks.
 - The retrieval benchmark helper prints JSON with `build_seconds`, `query_seconds`, and `top_result`.
+- The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
 
 Failure modes to report:
 - `127.0.0.1:11434` unreachable from WSL2.
@@ -76,3 +77,4 @@ Failure modes to report:
 - Planner JSON responses that are non-JSON, omit `rationale` or `actions`, or return invalid action payload types.
 - Chat or embeddings requests returning non-JSON or empty payloads.
 - Retrieval ranking returning zero-score chunks, unstable tie ordering, or malformed provider artifact fields.
+- Retrieval writes or queries using embedding dimensions that do not match the existing SQLite artifact.

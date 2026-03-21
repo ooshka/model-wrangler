@@ -124,4 +124,7 @@ This command prints JSON with:
 - total chunk count in the SQLite artifact
 - index build time
 - query time
+- whether the benchmark reset the SQLite artifact first
 - the top-ranked result summary
+
+Use `--no-reset` only when you intentionally want to measure behavior against an existing artifact state.

@@ -80,6 +80,14 @@ class SQLiteExactIndex:
         with sqlite3.connect(self.db_path) as connection:
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS artifact_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS chunks (
                     path TEXT NOT NULL,
                     chunk_index INTEGER NOT NULL,
@@ -97,10 +105,39 @@ class SQLiteExactIndex:
                 """
             )
 
+    def reset(self) -> None:
+        self.initialize()
+        with sqlite3.connect(self.db_path) as connection:
+            connection.execute("DELETE FROM chunks")
+            connection.execute("DELETE FROM artifact_metadata")
+
+    def _get_artifact_dimension(self, connection: sqlite3.Connection) -> int | None:
+        row = connection.execute(
+            "SELECT value FROM artifact_metadata WHERE key = 'embedding_dimensions'"
+        ).fetchone()
+        if row is None:
+            return None
+        return int(row[0])
+
+    def _set_artifact_dimension(self, connection: sqlite3.Connection, dimension: int) -> None:
+        connection.execute(
+            """
+            INSERT INTO artifact_metadata (key, value)
+            VALUES ('embedding_dimensions', ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (str(dimension),),
+        )
+
     def upsert_chunks(self, chunks: Iterable[ChunkRecord]) -> int:
         rows: list[tuple[str, int, str, str, int]] = []
+        expected_dimension: int | None = None
         for chunk in chunks:
             embedding = _normalize_embedding(chunk.embedding)
+            if expected_dimension is None:
+                expected_dimension = len(embedding)
+            elif len(embedding) != expected_dimension:
+                raise ValueError("All chunks in one write must use the same embedding dimensions.")
             rows.append(
                 (
                     chunk.path,
@@ -116,6 +153,13 @@ class SQLiteExactIndex:
 
         self.initialize()
         with sqlite3.connect(self.db_path) as connection:
+            artifact_dimension = self._get_artifact_dimension(connection)
+            if artifact_dimension is None:
+                self._set_artifact_dimension(connection, expected_dimension)
+            elif artifact_dimension != expected_dimension:
+                raise ValueError(
+                    "Embedding dimensions do not match this retrieval artifact."
+                )
             connection.executemany(
                 """
                 INSERT INTO chunks (
@@ -150,13 +194,22 @@ class SQLiteExactIndex:
         results: list[tuple[float, str, int, str]] = []
         self.initialize()
 
-        sql = (
-            "SELECT path, chunk_index, content, embedding_json FROM chunks"
-            " WHERE (? IS NULL OR path LIKE ?)"
-        )
-        params = (path_prefix, None if path_prefix is None else f"{path_prefix}%")
-
         with sqlite3.connect(self.db_path) as connection:
+            artifact_dimension = self._get_artifact_dimension(connection)
+            if artifact_dimension is not None and artifact_dimension != len(normalized_query):
+                raise ValueError(
+                    "Query embedding dimensions do not match this retrieval artifact."
+                )
+
+            sql = (
+                "SELECT path, chunk_index, content, embedding_json FROM chunks"
+                " WHERE embedding_dimensions = ? AND (? IS NULL OR path LIKE ?)"
+            )
+            params = (
+                len(normalized_query),
+                path_prefix,
+                None if path_prefix is None else f"{path_prefix}%",
+            )
             rows = connection.execute(sql, params).fetchall()
 
         for path, chunk_index, content, embedding_json in rows:
@@ -194,8 +247,11 @@ def run_benchmark(
     *,
     limit: int,
     query_text: str | None = None,
+    reset: bool = True,
 ) -> dict:
     index = SQLiteExactIndex(db_path)
+    if reset:
+        index.reset()
 
     started_at = time.perf_counter()
     inserted = index.upsert_chunks(chunks)
@@ -216,6 +272,7 @@ def run_benchmark(
         "limit": limit,
         "build_seconds": round(build_seconds, 6),
         "query_seconds": round(query_seconds, 6),
+        "reset": reset,
         "top_result": None if not results else {
             "path": results[0]["path"],
             "chunk_index": results[0]["chunk_index"],
@@ -268,6 +325,11 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="JSON fixture with chunks and query_embedding.",
     )
+    parser.add_argument(
+        "--no-reset",
+        action="store_true",
+        help="Reuse the existing SQLite artifact instead of resetting it first.",
+    )
     return parser
 
 
@@ -280,6 +342,7 @@ def main() -> int:
         query_embedding,
         limit=limit,
         query_text=query_text,
+        reset=not args.no_reset,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
