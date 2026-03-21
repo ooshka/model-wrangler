@@ -78,6 +78,7 @@ Expected result:
 - The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
 - The reranker evaluation helper is comparison-only; it does not change the default exact-search query path.
 - The parity fixture helper is comparison-only; it validates local provider evidence and failure categories, not `mirai` API envelopes or error payloads.
+- The parity fixture JSON files now live under `tests/fixtures/`; keep executable test assets there, while this document remains the command/reference guide.
 - The parity fixture helper should pass before starting a `mirai` planner-provider or local retrieval handoff slice.
 - Treat the SQLite exact baseline as still acceptable when the representative benchmark stays comfortably within the local workflow envelope.
   - Revisit ANN or a service-backed store when repeated runs against the project-owned fixture or a representative note set show any of these conditions:

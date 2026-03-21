@@ -13,8 +13,8 @@ from scripts.retrieval.sqlite_exact import run_retrieval_parity_fixture
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_RETRIEVAL_FIXTURE = ROOT / "agent_docs" / "testing" / "local_retrieval_parity_fixture.json"
-DEFAULT_PLANNER_FIXTURE = ROOT / "agent_docs" / "testing" / "planner_json_parity_fixture.json"
+DEFAULT_RETRIEVAL_FIXTURE = ROOT / "tests" / "fixtures" / "local_retrieval_parity_fixture.json"
+DEFAULT_PLANNER_FIXTURE = ROOT / "tests" / "fixtures" / "planner_json_parity_fixture.json"
 
 
 def build_parser() -> argparse.ArgumentParser:

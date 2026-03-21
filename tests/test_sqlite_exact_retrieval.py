@@ -12,6 +12,9 @@ from scripts.retrieval.sqlite_exact import (
 )
 
 
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+
 class SQLiteExactIndexTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
@@ -344,64 +347,10 @@ class FixtureCompatibilityTests(unittest.TestCase):
         self.assertIn("query_embedding", serialized)
 
     def test_retrieval_parity_fixture_reports_expected_summary(self) -> None:
-        fixture_payload = {
-            "chunks": [
-                {
-                    "path": "notes/summary.md",
-                    "chunk_index": 0,
-                    "content": "Weekly planning recap with action items and owner notes.",
-                    "embedding": [1.0, 0.0, 0.0],
-                },
-                {
-                    "path": "notes/today.md",
-                    "chunk_index": 0,
-                    "content": "Alpha budget decisions and alpha budget follow-up tasks for today.",
-                    "embedding": [0.92, 0.08, 0.0],
-                },
-            ],
-            "query_embedding": [1.0, 0.0, 0.0],
-            "query_text": "alpha budget",
-            "limit": 2,
-            "expected": {
-                "changed_top_result": True,
-                "changed_ranking": True,
-                "baseline_results": [
-                    {
-                        "path": "notes/summary.md",
-                        "chunk_index": 0,
-                        "score": 1.0,
-                        "matched_term_count": 0,
-                    },
-                    {
-                        "path": "notes/today.md",
-                        "chunk_index": 0,
-                        "score": 0.996241,
-                        "matched_term_count": 2,
-                    },
-                ],
-                "reranked_results": [
-                    {
-                        "path": "notes/today.md",
-                        "chunk_index": 0,
-                        "score": 0.996241,
-                        "matched_term_count": 2,
-                    },
-                    {
-                        "path": "notes/summary.md",
-                        "chunk_index": 0,
-                        "score": 1.0,
-                        "matched_term_count": 0,
-                    },
-                ],
-            },
-        }
-
         with tempfile.TemporaryDirectory() as tempdir:
-            fixture_path = Path(tempdir) / "retrieval_parity.json"
-            fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
             result = run_retrieval_parity_fixture(
                 Path(tempdir) / "parity.sqlite3",
-                fixture_path,
+                FIXTURES_DIR / "local_retrieval_parity_fixture.json",
             )
 
         self.assertEqual(result["mode"], "retrieval_parity_fixture")

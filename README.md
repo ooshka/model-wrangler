@@ -155,3 +155,5 @@ python3 -m scripts.validate_local_provider_parity \
 ```
 
 This comparison-only command validates the project-owned retrieval and planner parity fixtures used before deeper `mirai` provider handoff work resumes. It checks local provider evidence and failure categories only; it does not assert `mirai` API envelopes or error payloads.
+
+The parity fixture JSON files live under `tests/fixtures/`, while `agent_docs/testing/README.md` remains the human-facing verification guide.
