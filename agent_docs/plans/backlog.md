@@ -2,10 +2,7 @@
 
 ## Now
 
-1. Retrieval Baseline Benchmark + Upgrade Thresholds
-- Type: `feature`
-- Value: measures whether the SQLite exact-search path is still acceptable before any ANN backend is introduced.
-- Size: ~0.5-1 day.
+No currently tracked items.
 
 ## Next
 
