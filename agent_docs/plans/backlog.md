@@ -2,10 +2,7 @@
 
 ## Now
 
-1. Local Provider Parity Fixture Pack
-- Type: `hardening`
-- Value: creates reusable prompts and expected-shape checks for retrieval and planner behavior before deeper `mirai` provider wiring resumes.
-- Size: ~1 day.
+No currently tracked items.
 
 ## Next
 
