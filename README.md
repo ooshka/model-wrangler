@@ -135,3 +135,14 @@ Use `--no-reset` only when you intentionally want to measure behavior against an
 Current upgrade-threshold guidance:
 - keep the SQLite exact baseline while representative runs stay comfortably under about `0.100s` query time and `1.000s` build time
 - revisit ANN or a service-backed store when repeated runs cross those bounds, when artifact size approaches roughly `100 MB`, or when chunk counts move into the low five figures
+
+Reranker evaluation helper:
+
+```bash
+python3 -m scripts.retrieval.sqlite_exact \
+  --db-path /tmp/local_llm_rerank.sqlite3 \
+  --fixture agent_docs/testing/sqlite_exact_rerank_fixture.json \
+  --rerank-evaluate
+```
+
+This comparison-only command keeps exact search as the default path and prints bounded JSON showing baseline ordering, reranked ordering, whether the top result changed, and the added rerank timing cost.

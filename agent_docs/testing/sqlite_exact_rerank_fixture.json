@@ -1,0 +1,25 @@
+{
+  "chunks": [
+    {
+      "path": "notes/summary.md",
+      "chunk_index": 0,
+      "content": "Weekly planning recap with action items and owner notes.",
+      "embedding": [1.0, 0.0, 0.0]
+    },
+    {
+      "path": "notes/today.md",
+      "chunk_index": 0,
+      "content": "Alpha budget decisions and alpha budget follow-up tasks for today.",
+      "embedding": [0.92, 0.08, 0.0]
+    },
+    {
+      "path": "notes/archive.md",
+      "chunk_index": 0,
+      "content": "Historical archive of unrelated meeting notes.",
+      "embedding": [0.4, 0.6, 0.0]
+    }
+  ],
+  "query_embedding": [1.0, 0.0, 0.0],
+  "query_text": "alpha budget",
+  "limit": 2
+}

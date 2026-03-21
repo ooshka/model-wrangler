@@ -71,6 +71,48 @@ def _derive_snippet_offset(content: str, query_text: str | None) -> dict[str, in
     return None
 
 
+def _query_terms(query_text: str | None) -> tuple[str, ...]:
+    if not query_text:
+        return ()
+
+    terms: list[str] = []
+    for token in query_text.lower().split():
+        normalized = "".join(character for character in token if character.isalnum())
+        if len(normalized) < 3:
+            continue
+        if normalized not in terms:
+            terms.append(normalized)
+    return tuple(terms)
+
+
+def _matched_terms(content: str, query_text: str | None) -> tuple[str, ...]:
+    lowered_content = content.lower()
+    return tuple(term for term in _query_terms(query_text) if term in lowered_content)
+
+
+def _rerank_results(results: Sequence[dict], query_text: str | None) -> list[dict]:
+    reranked = []
+    for result in results:
+        matched_terms = _matched_terms(result["content"], query_text)
+        reranked.append(
+            {
+                **result,
+                "matched_terms": matched_terms,
+                "matched_term_count": len(matched_terms),
+            }
+        )
+
+    reranked.sort(
+        key=lambda item: (
+            -item["matched_term_count"],
+            -item["score"],
+            item["path"],
+            item["chunk_index"],
+        )
+    )
+    return reranked
+
+
 class SQLiteExactIndex:
     def __init__(self, db_path: Path | str) -> None:
         self.db_path = Path(db_path)
@@ -290,6 +332,70 @@ def run_benchmark(
     }
 
 
+def _result_summary(results: Sequence[dict], query_text: str | None = None) -> list[dict]:
+    return [
+        {
+            "path": result["path"],
+            "chunk_index": result["chunk_index"],
+            "score": round(result["score"], 6),
+            "matched_term_count": result.get(
+                "matched_term_count",
+                len(_matched_terms(result["content"], query_text)),
+            ),
+        }
+        for result in results
+    ]
+
+
+def run_rerank_evaluation(
+    db_path: Path | str,
+    chunks: Sequence[ChunkRecord],
+    query_embedding: Sequence[float],
+    *,
+    limit: int,
+    query_text: str | None = None,
+    reset: bool = True,
+) -> dict:
+    index = SQLiteExactIndex(db_path)
+    if reset:
+        index.reset()
+
+    index.upsert_chunks(chunks)
+
+    started_at = time.perf_counter()
+    baseline_results = index.query(
+        query_embedding,
+        limit=limit,
+        query_text=query_text,
+    )
+    baseline_query_seconds = time.perf_counter() - started_at
+
+    started_at = time.perf_counter()
+    reranked_results = _rerank_results(baseline_results, query_text)
+    rerank_seconds = time.perf_counter() - started_at
+
+    baseline_summary = _result_summary(baseline_results, query_text)
+    reranked_summary = _result_summary(reranked_results, query_text)
+
+    return {
+        "mode": "rerank_evaluation",
+        "database_path": str(Path(db_path)),
+        "chunk_count": index.count_chunks(),
+        "note_count": index.count_notes(),
+        "embedding_dimensions": len(query_embedding),
+        "artifact_bytes": Path(db_path).stat().st_size if Path(db_path).exists() else 0,
+        "limit": limit,
+        "reset": reset,
+        "query_text": query_text,
+        "baseline_query_seconds": round(baseline_query_seconds, 6),
+        "rerank_seconds": round(rerank_seconds, 6),
+        "changed_top_result": baseline_summary[:1] != reranked_summary[:1],
+        "changed_ranking": baseline_summary != reranked_summary,
+        "baseline_results": baseline_summary,
+        "reranked_results": reranked_summary,
+    }
+
+
 def _load_fixture(path: Path) -> tuple[list[ChunkRecord], tuple[float, ...], int, str | None]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -339,20 +445,35 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Reuse the existing SQLite artifact instead of resetting it first.",
     )
+    parser.add_argument(
+        "--rerank-evaluate",
+        action="store_true",
+        help="Compare baseline exact-search ordering against a lightweight reranked variant.",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     chunks, query_embedding, limit, query_text = _load_fixture(Path(args.fixture))
-    result = run_benchmark(
-        args.db_path,
-        chunks,
-        query_embedding,
-        limit=limit,
-        query_text=query_text,
-        reset=not args.no_reset,
-    )
+    if args.rerank_evaluate:
+        result = run_rerank_evaluation(
+            args.db_path,
+            chunks,
+            query_embedding,
+            limit=limit,
+            query_text=query_text,
+            reset=not args.no_reset,
+        )
+    else:
+        result = run_benchmark(
+            args.db_path,
+            chunks,
+            query_embedding,
+            limit=limit,
+            query_text=query_text,
+            reset=not args.no_reset,
+        )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 

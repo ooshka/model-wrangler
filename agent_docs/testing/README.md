@@ -52,6 +52,8 @@ WSL2 verification commands:
   - `python3 -m unittest tests.test_sqlite_exact_retrieval`
 - Retrieval baseline benchmark helper:
   - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json`
+- Reranker evaluation helper:
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_rerank.sqlite3 --fixture agent_docs/testing/sqlite_exact_rerank_fixture.json --rerank-evaluate`
 - Runtime and model presence:
   - `python3 scripts/ollama/smoke.py --check-only`
 - Planner JSON contract smoke:
@@ -69,7 +71,9 @@ Expected result:
 - The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions, a chat preview, and planner JSON summary fields.
 - The retrieval unit test passes with deterministic ranking and contract-shape checks.
 - The retrieval benchmark helper prints JSON with `chunk_count`, `note_count`, `embedding_dimensions`, `artifact_bytes`, `build_seconds`, `query_seconds`, and `top_result`.
+- The reranker evaluation helper prints JSON with `baseline_results`, `reranked_results`, `changed_top_result`, `changed_ranking`, `baseline_query_seconds`, and `rerank_seconds`.
 - The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
+- The reranker evaluation helper is comparison-only; it does not change the default exact-search query path.
 - Treat the SQLite exact baseline as still acceptable when the representative benchmark stays comfortably within the local workflow envelope.
   - Revisit ANN or a service-backed store when repeated runs against the project-owned fixture or a representative note set show any of these conditions:
   - `query_seconds` is consistently above `0.100`
@@ -85,3 +89,4 @@ Failure modes to report:
 - Retrieval ranking returning zero-score chunks, unstable tie ordering, or malformed provider artifact fields.
 - Retrieval writes or queries using embedding dimensions that do not match the existing SQLite artifact.
 - Retrieval benchmark output missing the documented context fields needed to interpret upgrade thresholds.
+- Reranker evaluation output that is nondeterministic or fails to explain whether top-result ordering changed.

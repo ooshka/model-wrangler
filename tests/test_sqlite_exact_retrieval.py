@@ -3,7 +3,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.retrieval.sqlite_exact import ChunkRecord, SQLiteExactIndex, run_benchmark
+from scripts.retrieval.sqlite_exact import (
+    ChunkRecord,
+    SQLiteExactIndex,
+    run_benchmark,
+    run_rerank_evaluation,
+)
 
 
 class SQLiteExactIndexTests(unittest.TestCase):
@@ -257,6 +262,65 @@ class RunBenchmarkTests(unittest.TestCase):
         self.assertEqual(second["embedding_dimensions"], 2)
         self.assertGreater(second["artifact_bytes"], 0)
         self.assertFalse(second["reset"])
+
+
+class RunRerankEvaluationTests(unittest.TestCase):
+    def test_reports_reranked_ordering_and_latency(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            db_path = Path(tempdir) / "rerank.sqlite3"
+            result = run_rerank_evaluation(
+                db_path,
+                [
+                    ChunkRecord(
+                        path="notes/summary.md",
+                        chunk_index=0,
+                        content="Weekly planning recap with action items and owner notes.",
+                        embedding=(1.0, 0.0, 0.0),
+                    ),
+                    ChunkRecord(
+                        path="notes/today.md",
+                        chunk_index=0,
+                        content="Alpha budget decisions and alpha budget follow-up tasks.",
+                        embedding=(0.92, 0.08, 0.0),
+                    ),
+                ],
+                query_embedding=(1.0, 0.0, 0.0),
+                limit=2,
+                query_text="alpha budget",
+            )
+
+        self.assertEqual(result["mode"], "rerank_evaluation")
+        self.assertEqual(result["chunk_count"], 2)
+        self.assertEqual(result["note_count"], 2)
+        self.assertTrue(result["changed_top_result"])
+        self.assertTrue(result["changed_ranking"])
+        self.assertEqual(result["baseline_results"][0]["path"], "notes/summary.md")
+        self.assertEqual(result["reranked_results"][0]["path"], "notes/today.md")
+        self.assertEqual(result["reranked_results"][0]["matched_term_count"], 2)
+        self.assertIn("baseline_query_seconds", result)
+        self.assertIn("rerank_seconds", result)
+
+    def test_does_not_change_default_benchmark_output_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            db_path = Path(tempdir) / "benchmark.sqlite3"
+            result = run_benchmark(
+                db_path,
+                [
+                    ChunkRecord(
+                        path="notes/alpha.md",
+                        chunk_index=0,
+                        content="alpha beta",
+                        embedding=(1.0, 0.0),
+                    )
+                ],
+                query_embedding=(1.0, 0.0),
+                limit=1,
+                query_text="alpha",
+            )
+
+        self.assertNotIn("mode", result)
+        self.assertNotIn("baseline_results", result)
+        self.assertNotIn("reranked_results", result)
 
 
 class FixtureCompatibilityTests(unittest.TestCase):
