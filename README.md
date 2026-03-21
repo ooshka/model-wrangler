@@ -122,9 +122,16 @@ python3 -m scripts.retrieval.sqlite_exact \
 This command prints JSON with:
 - inserted chunk count
 - total chunk count in the SQLite artifact
+- unique note count stored in the resulting SQLite artifact
+- embedding dimensions for the measured artifact/query pair
+- SQLite artifact byte size after the benchmark write
 - index build time
 - query time
 - whether the benchmark reset the SQLite artifact first
 - the top-ranked result summary
 
 Use `--no-reset` only when you intentionally want to measure behavior against an existing artifact state.
+
+Current upgrade-threshold guidance:
+- keep the SQLite exact baseline while representative runs stay comfortably under about `0.100s` query time and `1.000s` build time
+- revisit ANN or a service-backed store when repeated runs cross those bounds, when artifact size approaches roughly `100 MB`, or when chunk counts move into the low five figures

@@ -239,6 +239,12 @@ class SQLiteExactIndex:
             row = connection.execute("SELECT COUNT(*) FROM chunks").fetchone()
         return 0 if row is None else int(row[0])
 
+    def count_notes(self) -> int:
+        self.initialize()
+        with sqlite3.connect(self.db_path) as connection:
+            row = connection.execute("SELECT COUNT(DISTINCT path) FROM chunks").fetchone()
+        return 0 if row is None else int(row[0])
+
 
 def run_benchmark(
     db_path: Path | str,
@@ -268,6 +274,9 @@ def run_benchmark(
     return {
         "database_path": str(Path(db_path)),
         "chunk_count": index.count_chunks(),
+        "note_count": index.count_notes(),
+        "embedding_dimensions": len(query_embedding),
+        "artifact_bytes": Path(db_path).stat().st_size if Path(db_path).exists() else 0,
         "inserted_count": inserted,
         "limit": limit,
         "build_seconds": round(build_seconds, 6),
