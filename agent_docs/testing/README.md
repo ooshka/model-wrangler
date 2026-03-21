@@ -51,9 +51,9 @@ WSL2 verification commands:
 - Retrieval baseline unit test:
   - `python3 -m unittest tests.test_sqlite_exact_retrieval`
 - Retrieval baseline benchmark helper:
-  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json`
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture tests/fixtures/sqlite_exact_benchmark_fixture.json`
 - Reranker evaluation helper:
-  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_rerank.sqlite3 --fixture agent_docs/testing/sqlite_exact_rerank_fixture.json --rerank-evaluate`
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_rerank.sqlite3 --fixture tests/fixtures/sqlite_exact_rerank_fixture.json --rerank-evaluate`
 - Local provider parity fixture pack:
   - `python3 -m scripts.validate_local_provider_parity --db-path /tmp/local_llm_parity.sqlite3`
 - Runtime and model presence:
@@ -78,7 +78,7 @@ Expected result:
 - The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
 - The reranker evaluation helper is comparison-only; it does not change the default exact-search query path.
 - The parity fixture helper is comparison-only; it validates local provider evidence and failure categories, not `mirai` API envelopes or error payloads.
-- The parity fixture JSON files now live under `tests/fixtures/`; keep executable test assets there, while this document remains the command/reference guide.
+- The executable JSON fixtures for benchmark, reranker, and parity checks now live under `tests/fixtures/`; keep test assets there, while this document remains the command/reference guide.
 - The parity fixture helper should pass before starting a `mirai` planner-provider or local retrieval handoff slice.
 - Treat the SQLite exact baseline as still acceptable when the representative benchmark stays comfortably within the local workflow envelope.
   - Revisit ANN or a service-backed store when repeated runs against the project-owned fixture or a representative note set show any of these conditions:

@@ -116,7 +116,7 @@ Benchmark helper:
 ```bash
 python3 -m scripts.retrieval.sqlite_exact \
   --db-path /tmp/local_llm_retrieval.sqlite3 \
-  --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json
+  --fixture tests/fixtures/sqlite_exact_benchmark_fixture.json
 ```
 
 This command prints JSON with:
@@ -141,7 +141,7 @@ Reranker evaluation helper:
 ```bash
 python3 -m scripts.retrieval.sqlite_exact \
   --db-path /tmp/local_llm_rerank.sqlite3 \
-  --fixture agent_docs/testing/sqlite_exact_rerank_fixture.json \
+  --fixture tests/fixtures/sqlite_exact_rerank_fixture.json \
   --rerank-evaluate
 ```
 
@@ -156,4 +156,4 @@ python3 -m scripts.validate_local_provider_parity \
 
 This comparison-only command validates the project-owned retrieval and planner parity fixtures used before deeper `mirai` provider handoff work resumes. It checks local provider evidence and failure categories only; it does not assert `mirai` API envelopes or error payloads.
 
-The parity fixture JSON files live under `tests/fixtures/`, while `agent_docs/testing/README.md` remains the human-facing verification guide.
+The executable JSON fixtures for benchmark, reranker, and parity checks live under `tests/fixtures/`, while `agent_docs/testing/README.md` remains the human-facing verification guide.
