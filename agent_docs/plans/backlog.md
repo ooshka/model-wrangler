@@ -1,11 +1,18 @@
 # Backlog
 
+## Now
+
+1. SQLite Exact Retrieval Baseline
+- Type: `feature`
+- Value: chooses an in-process exact-search path that fits the current repo size, keeps artifacts inspectable, and unblocks the first retrieval implementation.
+- Size: ~1-2 days.
+
 ## Next
 
-1. Vector Index Choice + Benchmark
+1. Retrieval Baseline Benchmark + Upgrade Thresholds
 - Type: `feature`
-- Value: chooses the first local vector store/index path using measured fit for the Ollama embeddings workflow.
-- Size: ~1-2 days.
+- Value: measures whether the SQLite exact-search path is still acceptable before any ANN backend is introduced.
+- Size: ~0.5-1 day.
 
 2. Reranker Evaluation Slice
 - Type: `feature`

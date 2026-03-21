@@ -28,7 +28,8 @@ Project boundaries:
 - Record model sizing and latency tradeoffs on the target hardware for bounded-context use.
 
 4. Retrieval quality shaping
-- Evaluate optional reranking and vector-index choices only after the embeddings baseline is working.
+- Start with an exact local retrieval baseline using persisted embeddings and simple in-process ranking.
+- Evaluate ANN/vector-index upgrades only after the exact baseline is working and measured against local workflow latency needs.
 - Keep evaluation criteria tied to `mirai` retrieval contracts: bounded inputs, deterministic fallback, and inspectable result metadata.
 
 5. Parity fixtures and failure contracts
