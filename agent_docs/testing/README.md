@@ -51,9 +51,11 @@ WSL2 verification commands:
 - Retrieval baseline unit test:
   - `python3 -m unittest tests.test_sqlite_exact_retrieval`
 - Retrieval baseline benchmark helper:
-  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json`
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture tests/fixtures/sqlite_exact_benchmark_fixture.json`
 - Reranker evaluation helper:
-  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_rerank.sqlite3 --fixture agent_docs/testing/sqlite_exact_rerank_fixture.json --rerank-evaluate`
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_rerank.sqlite3 --fixture tests/fixtures/sqlite_exact_rerank_fixture.json --rerank-evaluate`
+- Local provider parity fixture pack:
+  - `python3 -m scripts.validate_local_provider_parity --db-path /tmp/local_llm_parity.sqlite3`
 - Runtime and model presence:
   - `python3 scripts/ollama/smoke.py --check-only`
 - Planner JSON contract smoke:
@@ -72,8 +74,12 @@ Expected result:
 - The retrieval unit test passes with deterministic ranking and contract-shape checks.
 - The retrieval benchmark helper prints JSON with `chunk_count`, `note_count`, `embedding_dimensions`, `artifact_bytes`, `build_seconds`, `query_seconds`, and `top_result`.
 - The reranker evaluation helper prints JSON with `baseline_results`, `reranked_results`, `changed_top_result`, `changed_ranking`, `baseline_query_seconds`, and `rerank_seconds`.
+- The parity fixture helper prints JSON with `retrieval` and `planner` sections plus overall `status`.
 - The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
 - The reranker evaluation helper is comparison-only; it does not change the default exact-search query path.
+- The parity fixture helper is comparison-only; it validates local provider evidence and failure categories, not `mirai` API envelopes or error payloads.
+- The executable JSON fixtures for benchmark, reranker, and parity checks now live under `tests/fixtures/`; keep test assets there, while this document remains the command/reference guide.
+- The parity fixture helper should pass before starting a `mirai` planner-provider or local retrieval handoff slice.
 - Treat the SQLite exact baseline as still acceptable when the representative benchmark stays comfortably within the local workflow envelope.
   - Revisit ANN or a service-backed store when repeated runs against the project-owned fixture or a representative note set show any of these conditions:
   - `query_seconds` is consistently above `0.100`
@@ -85,6 +91,7 @@ Failure modes to report:
 - `127.0.0.1:11434` unreachable from WSL2.
 - One or both baseline models missing from the Windows-hosted Ollama instance.
 - Planner JSON responses that are non-JSON, omit `rationale` or `actions`, or return invalid action payload types.
+- Planner parity failure categories should stay bounded to provider/runtime evidence such as `runtime_unavailable` and `malformed_planner_payload`; do not treat them as `mirai` API error-contract assertions.
 - Chat or embeddings requests returning non-JSON or empty payloads.
 - Retrieval ranking returning zero-score chunks, unstable tie ordering, or malformed provider artifact fields.
 - Retrieval writes or queries using embedding dimensions that do not match the existing SQLite artifact.

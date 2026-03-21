@@ -396,6 +396,88 @@ def run_rerank_evaluation(
     }
 
 
+def _normalize_expected_summary(items: object, field_name: str) -> list[dict]:
+    if not isinstance(items, list) or not items:
+        raise ValueError(f"Fixture must include a non-empty '{field_name}' array.")
+
+    normalized: list[dict] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError(f"Each '{field_name}' entry must be an object.")
+        normalized.append(
+            {
+                "path": item["path"],
+                "chunk_index": int(item["chunk_index"]),
+                "score": round(float(item["score"]), 6),
+                "matched_term_count": int(item["matched_term_count"]),
+            }
+        )
+    return normalized
+
+
+def run_retrieval_parity_fixture(
+    db_path: Path | str,
+    fixture_path: Path | str,
+) -> dict:
+    fixture_path = Path(fixture_path)
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Fixture must be a JSON object.")
+
+    expected = payload.get("expected")
+    if not isinstance(expected, dict):
+        raise ValueError("Fixture must include an 'expected' object.")
+
+    chunks, query_embedding, limit, query_text = _load_fixture(fixture_path)
+    result = run_rerank_evaluation(
+        db_path,
+        chunks,
+        query_embedding,
+        limit=limit,
+        query_text=query_text,
+        reset=True,
+    )
+
+    expected_baseline = _normalize_expected_summary(
+        expected.get("baseline_results"),
+        "baseline_results",
+    )
+    expected_reranked = _normalize_expected_summary(
+        expected.get("reranked_results"),
+        "reranked_results",
+    )
+    expected_changed_top_result = bool(expected.get("changed_top_result"))
+    expected_changed_ranking = bool(expected.get("changed_ranking"))
+
+    if result["baseline_results"] != expected_baseline:
+        raise RuntimeError(
+            "Retrieval parity fixture baseline_results did not match expected output."
+        )
+    if result["reranked_results"] != expected_reranked:
+        raise RuntimeError(
+            "Retrieval parity fixture reranked_results did not match expected output."
+        )
+    if result["changed_top_result"] != expected_changed_top_result:
+        raise RuntimeError(
+            "Retrieval parity fixture changed_top_result did not match expected output."
+        )
+    if result["changed_ranking"] != expected_changed_ranking:
+        raise RuntimeError(
+            "Retrieval parity fixture changed_ranking did not match expected output."
+        )
+
+    return {
+        "mode": "retrieval_parity_fixture",
+        "fixture_path": str(fixture_path),
+        "query_text": query_text,
+        "status": "parity-fixture-passed",
+        "changed_top_result": result["changed_top_result"],
+        "changed_ranking": result["changed_ranking"],
+        "baseline_results": result["baseline_results"],
+        "reranked_results": result["reranked_results"],
+    }
+
+
 def _load_fixture(path: Path) -> tuple[list[ChunkRecord], tuple[float, ...], int, str | None]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):

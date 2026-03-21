@@ -250,6 +250,120 @@ def validate_planner_payload(payload: dict) -> dict:
     }
 
 
+def classify_planner_failure(message: str) -> dict[str, str]:
+    normalized = message.strip()
+    if normalized.startswith("Unable to reach "):
+        return {
+            "category": "runtime_unavailable",
+            "boundary": "provider_runtime",
+            "owner": "local_llm",
+        }
+    if normalized.startswith("Planner JSON response"):
+        return {
+            "category": "malformed_planner_payload",
+            "boundary": "provider_output",
+            "owner": "local_llm",
+        }
+    return {
+        "category": "unknown",
+        "boundary": "unknown",
+        "owner": "local_llm",
+    }
+
+
+def run_planner_parity_fixture(fixture_path: Path | str) -> dict:
+    fixture_path = Path(fixture_path)
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Fixture must be a JSON object.")
+
+    valid_payload = payload.get("valid_payload")
+    if not isinstance(valid_payload, dict):
+        raise ValueError("Fixture must include a 'valid_payload' object.")
+
+    expected = payload.get("expected")
+    if not isinstance(expected, dict):
+        raise ValueError("Fixture must include an 'expected' object.")
+
+    parsed = parse_planner_json_content(json.dumps(valid_payload))
+    validated = validate_planner_payload(parsed)
+
+    expected_action_count = int(expected["action_count"])
+    expected_first_action = expected["first_action"]
+    expected_rationale = expected.get("rationale")
+    expected_param_keys = expected.get("first_action_param_keys", [])
+    if not isinstance(expected_param_keys, list):
+        raise ValueError("'first_action_param_keys' must be an array when present.")
+
+    actual_first_action = validated["actions"][0]
+    if len(validated["actions"]) != expected_action_count:
+        raise RuntimeError(
+            "Planner parity fixture action_count did not match expected output."
+        )
+    if actual_first_action["action"] != expected_first_action:
+        raise RuntimeError(
+            "Planner parity fixture first_action did not match expected output."
+        )
+    if validated["rationale"] != expected_rationale:
+        raise RuntimeError(
+            "Planner parity fixture rationale did not match expected output."
+        )
+    if sorted(actual_first_action["params"].keys()) != sorted(expected_param_keys):
+        raise RuntimeError(
+            "Planner parity fixture first_action params did not match expected output."
+        )
+
+    raw_invalid_payload = payload.get("invalid_json_payload")
+    if not isinstance(raw_invalid_payload, str):
+        raise ValueError("Fixture must include an 'invalid_json_payload' string.")
+    expected_invalid_json_error = payload.get("invalid_json_error")
+    if not isinstance(expected_invalid_json_error, str):
+        raise ValueError("Fixture must include an 'invalid_json_error' string.")
+    try:
+        parse_planner_json_content(raw_invalid_payload)
+    except RuntimeError as exc:
+        if str(exc) != expected_invalid_json_error:
+            raise RuntimeError(
+                "Planner parity fixture invalid_json_error did not match expected output."
+            ) from exc
+    else:
+        raise RuntimeError("Planner parity fixture invalid_json_payload unexpectedly parsed.")
+
+    raw_failure_expectations = payload.get("failure_expectations")
+    if not isinstance(raw_failure_expectations, list) or not raw_failure_expectations:
+        raise ValueError("Fixture must include a non-empty 'failure_expectations' array.")
+
+    failure_expectations = []
+    for item in raw_failure_expectations:
+        if not isinstance(item, dict):
+            raise ValueError("Each failure expectation must be an object.")
+        summary = classify_planner_failure(item["message"])
+        if summary["category"] != item["expected_category"]:
+            raise RuntimeError(
+                f"Planner parity fixture category mismatch for '{item['name']}'."
+            )
+        if summary["boundary"] != item["expected_boundary"]:
+            raise RuntimeError(
+                f"Planner parity fixture boundary mismatch for '{item['name']}'."
+            )
+        failure_expectations.append(
+            {
+                "name": item["name"],
+                **summary,
+            }
+        )
+
+    return {
+        "mode": "planner_parity_fixture",
+        "fixture_path": str(fixture_path),
+        "status": "parity-fixture-passed",
+        "rationale": validated["rationale"],
+        "action_count": len(validated["actions"]),
+        "first_action": actual_first_action["action"],
+        "failure_expectations": failure_expectations,
+    }
+
+
 def run_planner_json_smoke(config: dict[str, str]) -> dict:
     prompt_payload = {
         "intent": "Prepare the next local_llm planner validation step.",

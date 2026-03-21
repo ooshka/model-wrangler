@@ -1,11 +1,17 @@
 import unittest
+from pathlib import Path
 
 from scripts.ollama.smoke import (
+    classify_planner_failure,
     ensure_model_present,
     model_name_variants,
     parse_planner_json_content,
+    run_planner_parity_fixture,
     validate_planner_payload,
 )
+
+
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 
 class ModelNameVariantsTests(unittest.TestCase):
@@ -151,6 +157,81 @@ class ValidatePlannerPayloadTests(unittest.TestCase):
                 ],
             },
         )
+
+
+class PlannerFailureClassificationTests(unittest.TestCase):
+    def test_classifies_runtime_unavailable_failure(self) -> None:
+        self.assertEqual(
+            classify_planner_failure(
+                "Unable to reach http://127.0.0.1:11434/v1/chat/completions: [Errno 111] Connection refused"
+            ),
+            {
+                "category": "runtime_unavailable",
+                "boundary": "provider_runtime",
+                "owner": "local_llm",
+            },
+        )
+
+    def test_classifies_malformed_payload_failure(self) -> None:
+        self.assertEqual(
+            classify_planner_failure("Planner JSON response was not valid JSON."),
+            {
+                "category": "malformed_planner_payload",
+                "boundary": "provider_output",
+                "owner": "local_llm",
+            },
+        )
+
+
+class PlannerParityFixtureTests(unittest.TestCase):
+    def test_reports_expected_summary(self) -> None:
+        result = run_planner_parity_fixture(FIXTURES_DIR / "planner_json_parity_fixture.json")
+
+        self.assertEqual(result["mode"], "planner_parity_fixture")
+        self.assertEqual(result["status"], "parity-fixture-passed")
+        self.assertEqual(result["first_action"], "notes.read")
+        self.assertEqual(len(result["failure_expectations"]), 2)
+
+    def test_raises_on_expected_mismatch(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+
+        fixture_payload = {
+            "valid_payload": {
+                "actions": [
+                    {
+                        "action": "notes.read",
+                        "params": {"path": "notes/today.md"},
+                    }
+                ]
+            },
+            "expected": {
+                "rationale": None,
+                "action_count": 1,
+                "first_action": "notes.write",
+                "first_action_param_keys": ["path"],
+            },
+            "invalid_json_payload": "not json",
+            "invalid_json_error": "Planner JSON response was not valid JSON.",
+            "failure_expectations": [
+                {
+                    "name": "malformed_planner_payload",
+                    "message": "Planner JSON response was not valid JSON.",
+                    "expected_category": "malformed_planner_payload",
+                    "expected_boundary": "provider_output",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            fixture_path = Path(tempdir) / "planner_parity_bad.json"
+            fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "first_action did not match expected output",
+            ):
+                run_planner_parity_fixture(fixture_path)
 
 
 if __name__ == "__main__":
