@@ -1,0 +1,25 @@
+{
+  "chunks": [
+    {
+      "path": "notes/alpha.md",
+      "chunk_index": 0,
+      "content": "alpha beta gamma",
+      "embedding": [1.0, 0.0, 0.0]
+    },
+    {
+      "path": "notes/beta.md",
+      "chunk_index": 0,
+      "content": "delta epsilon zeta",
+      "embedding": [0.0, 1.0, 0.0]
+    },
+    {
+      "path": "notes/gamma.md",
+      "chunk_index": 0,
+      "content": "alpha delta",
+      "embedding": [0.8, 0.2, 0.0]
+    }
+  ],
+  "query_embedding": [1.0, 0.0, 0.0],
+  "query_text": "alpha summary",
+  "limit": 2
+}

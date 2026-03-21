@@ -30,6 +30,9 @@ As local runtime scripts, config, or evaluation code are added:
   - Add at least one documented smoke command here.
 - New evaluation harness or comparison code:
   - Add the narrowest reproducible verification command here before merging follow-on work.
+- New local retrieval/index code:
+  - Add focused unit tests for artifact shape, ranking behavior, and deterministic ordering.
+  - Document one small benchmark command with a project-owned fixture when performance thresholds matter to follow-on planning.
 
 ## Current Ollama Baseline Verification
 
@@ -45,6 +48,10 @@ WSL2 verification commands:
   - `python3 scripts/ollama/smoke.py --print-config`
 - Smoke helper unit test:
   - `python3 -m unittest tests.test_ollama_smoke`
+- Retrieval baseline unit test:
+  - `python3 -m unittest tests.test_sqlite_exact_retrieval`
+- Retrieval baseline benchmark helper:
+  - `python3 -m scripts.retrieval.sqlite_exact --db-path /tmp/local_llm_retrieval.sqlite3 --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json`
 - Runtime and model presence:
   - `python3 scripts/ollama/smoke.py --check-only`
 - Planner JSON contract smoke:
@@ -60,9 +67,14 @@ Expected result:
 - `--check-only` returns JSON with `"status": "runtime-ready"`.
 - `--planner-json-only` returns JSON with `"status": "planner-json-passed"` plus planner action count and first action name.
 - The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions, a chat preview, and planner JSON summary fields.
+- The retrieval unit test passes with deterministic ranking and contract-shape checks.
+- The retrieval benchmark helper prints JSON with `build_seconds`, `query_seconds`, and `top_result`.
+- The retrieval benchmark helper resets the SQLite artifact by default; pass `--no-reset` only for intentional stateful experiments.
 
 Failure modes to report:
 - `127.0.0.1:11434` unreachable from WSL2.
 - One or both baseline models missing from the Windows-hosted Ollama instance.
 - Planner JSON responses that are non-JSON, omit `rationale` or `actions`, or return invalid action payload types.
 - Chat or embeddings requests returning non-JSON or empty payloads.
+- Retrieval ranking returning zero-score chunks, unstable tie ordering, or malformed provider artifact fields.
+- Retrieval writes or queries using embedding dimensions that do not match the existing SQLite artifact.
