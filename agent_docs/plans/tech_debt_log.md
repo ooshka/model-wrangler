@@ -7,15 +7,15 @@
 - Trigger: becomes risky as soon as retrieval code lands or multiple local retrieval experiments appear.
 - Planned handling: keep the first implementation focused on the existing provider artifact contract and avoid backend-specific contract leakage.
 
-2. Retrieval quality beyond the exact-search baseline is still unproven
-- Impact: the repo now has a working exact-search baseline, but retrieval-quality shaping beyond raw cosine ranking is still unproven before `mirai` handoff work.
-- Trigger: active now that benchmark evidence exists and the next decision is whether a lightweight reranker materially improves result ordering.
-- Planned handling: run one bounded reranker evaluation slice against the current SQLite retrieval harness before promoting any rerank-aware handoff work into `mirai`.
+2. Reusable parity evidence is still missing across retrieval and planner seams
+- Impact: the repo now has benchmark, reranker, and planner smoke evidence, but follow-on `mirai` provider work would still rely on one-off command output instead of reusable local expectations.
+- Trigger: active now that the next likely cross-repo handoff is planner/provider wiring rather than baseline capability proof.
+- Planned handling: add one bounded parity-fixture pack plus validation helpers that capture retrieval artifact expectations, planner JSON structural expectations, and key failure categories.
 
-3. ANN upgrade threshold is not measured yet
-- Impact: the team could either over-engineer a vector backend too early or cling to exact search after it stops fitting the workstation envelope.
-- Trigger: now relevant as corpus size and latency evidence accumulates beyond the initial benchmark slice.
-- Planned handling: use the canonical SQLite benchmark command to capture `chunk_count`, `note_count`, `artifact_bytes`, `build_seconds`, and `query_seconds`, then revisit ANN or a service-backed store when repeated representative runs exceed roughly `0.100s` query time, `1.000s` build time, or workstation-scale artifact/corpus bounds.
+3. ANN upgrade threshold is documented but not yet exercised against broader representative note sets
+- Impact: the repo has an initial benchmark threshold, but future growth could still outpace the current single-fixture evidence if note volume or chunk variety changes materially.
+- Trigger: becomes relevant when repeated representative runs move beyond the current project-owned benchmark fixture or when the next retrieval implementation slice starts stressing artifact size/latency bounds.
+- Planned handling: keep the current threshold guidance as the baseline and revisit broader benchmark coverage only when corpus growth or `mirai` handoff pressure makes the single-fixture evidence insufficient.
 
 4. Planner reliability beyond single-smoke coverage is still unproven locally
 - Impact: one successful structured-output smoke path does not yet establish behavior across varied intents, larger contexts, or fallback scenarios.
