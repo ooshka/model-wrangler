@@ -16,6 +16,11 @@ Initial goals:
 - establish a local embedding and vector-index strategy that can support retrieval parity checks
 - document operational constraints, configuration, and test workflows before wiring the provider into `mirai`
 
+Current retrieval baseline direction:
+- persist chunk metadata and embeddings in a local SQLite artifact
+- perform exact cosine ranking in-process for the first retrieval path
+- defer ANN/vector-service upgrades until benchmark data shows the exact path no longer fits the workstation envelope
+
 The current default runtime direction is Ollama on Windows, with `local_llm` owning the project-level config, smoke paths, and documentation consumed from WSL2.
 
 ## Relationship to `mirai`
@@ -96,3 +101,27 @@ WSL2 workflow:
    ```
 
 The smoke script defaults already point at `127.0.0.1`, so most workstations should not need any local config override.
+
+## Retrieval Baseline
+
+The first local retrieval implementation lives in `scripts/retrieval/sqlite_exact.py`.
+
+It is intentionally simple:
+- store chunk records in SQLite with repo-relative paths and serialized embeddings
+- rank matches with exact cosine similarity in-process
+- return provider-side ranked chunk artifacts compatible with `agent_docs/contracts/local_retrieval_artifact_contract.md`
+
+Benchmark helper:
+
+```bash
+python3 -m scripts.retrieval.sqlite_exact \
+  --db-path /tmp/local_llm_retrieval.sqlite3 \
+  --fixture agent_docs/testing/sqlite_exact_benchmark_fixture.json
+```
+
+This command prints JSON with:
+- inserted chunk count
+- total chunk count in the SQLite artifact
+- index build time
+- query time
+- the top-ranked result summary
