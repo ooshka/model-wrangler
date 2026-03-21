@@ -122,7 +122,7 @@ python3 -m scripts.retrieval.sqlite_exact \
 This command prints JSON with:
 - inserted chunk count
 - total chunk count in the SQLite artifact
-- unique note count represented in the benchmark fixture
+- unique note count stored in the resulting SQLite artifact
 - embedding dimensions for the measured artifact/query pair
 - SQLite artifact byte size after the benchmark write
 - index build time
