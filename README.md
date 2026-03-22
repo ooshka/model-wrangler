@@ -95,12 +95,21 @@ WSL2 workflow:
    ```bash
    python3 scripts/ollama/smoke.py --planner-json-only
    ```
-5. Run the full smoke path for embeddings, planner-style chat, and strict planner JSON:
+5. Run the workflow draft patch smoke path that exercises a bounded single-file unified-diff response:
+   ```bash
+   python3 scripts/ollama/smoke.py --draft-patch-only
+   ```
+6. Run the full smoke path for embeddings, planner-style chat, strict planner JSON, and draft patch smoke:
    ```bash
    python3 scripts/ollama/smoke.py
    ```
 
 The smoke script defaults already point at `127.0.0.1`, so most workstations should not need any local config override.
+
+The draft smoke path validates only the local provider boundary needed for the next `mirai` handoff:
+- the response must contain a non-empty unified diff, either directly or inside a JSON `patch` field
+- the diff must target one markdown path with one hunk and at least one changed line
+- failure interpretation stays local to runtime/provider evidence; it does not assert `mirai` endpoint error envelopes
 
 ## Retrieval Baseline
 

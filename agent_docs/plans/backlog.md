@@ -2,10 +2,7 @@
 
 ## Now
 
-1. Local Workflow Draft Patch Smoke Path
-- Type: `feature`
-- Value: establishes a repeatable local patch-drafting baseline and bounded failure behavior so `mirai` does not guess at the next self-hosted workflow seam.
-- Size: ~1 day.
+No currently tracked items.
 
 ## Next
 

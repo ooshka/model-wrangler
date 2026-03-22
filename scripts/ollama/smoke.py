@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -15,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE_ENV = ROOT / "config" / "ollama.env.example"
 LOCAL_ENV = ROOT / "config" / "ollama.env"
+UNIFIED_DIFF_PATH_RE = re.compile(r"^(---|\+\+\+) [ab]/(.+)$")
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -250,6 +252,77 @@ def validate_planner_payload(payload: dict) -> dict:
     }
 
 
+def parse_draft_patch_content(content: str) -> str:
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError("Draft patch response missing message content.")
+
+    normalized = content.strip()
+    if normalized.startswith("--- "):
+        return normalized
+
+    try:
+        payload = json.loads(normalized)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Draft patch response was not valid JSON or unified diff text.") from exc
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("Draft patch response must be a JSON object or unified diff text.")
+
+    patch = payload.get("patch")
+    if not isinstance(patch, str) or not patch.strip():
+        raise RuntimeError("Draft patch response missing non-empty 'patch' string.")
+
+    return patch.strip()
+
+
+def validate_draft_patch(patch: str) -> dict:
+    if not isinstance(patch, str) or not patch.strip():
+        raise RuntimeError("Draft patch must be a non-empty string.")
+
+    lines = patch.strip().splitlines()
+    if len(lines) < 3:
+        raise RuntimeError("Draft patch must be a unified diff with header and hunk.")
+
+    source_index = next((index for index, line in enumerate(lines) if line.startswith("--- ")), None)
+    if source_index is None or source_index + 1 >= len(lines):
+        raise RuntimeError("Draft patch missing valid '--- a/<path>' header.")
+
+    source_match = UNIFIED_DIFF_PATH_RE.match(lines[source_index])
+    target_match = UNIFIED_DIFF_PATH_RE.match(lines[source_index + 1])
+    if source_match is None or source_match.group(1) != "---":
+        raise RuntimeError("Draft patch missing valid '--- a/<path>' header.")
+    if target_match is None or target_match.group(1) != "+++":
+        raise RuntimeError("Draft patch missing valid '+++ b/<path>' header.")
+
+    source_path = source_match.group(2)
+    target_path = target_match.group(2)
+    if source_path != target_path:
+        raise RuntimeError("Draft patch must target the same path in both diff headers.")
+    if not source_path.endswith(".md"):
+        raise RuntimeError("Draft patch path must target a markdown file.")
+    if ".." in Path(source_path).parts:
+        raise RuntimeError("Draft patch path must be repo-relative without traversal.")
+
+    body_lines = lines[source_index + 2:]
+    hunk_count = sum(1 for line in body_lines if line.startswith("@@"))
+    if hunk_count != 1:
+        raise RuntimeError("Draft patch must contain exactly one diff hunk.")
+
+    change_lines = [
+        line for line in body_lines
+        if line.startswith("+") or line.startswith("-")
+    ]
+    if not change_lines:
+        raise RuntimeError("Draft patch must contain at least one changed line.")
+
+    return {
+        "path": source_path,
+        "hunk_count": hunk_count,
+        "line_count": len(lines),
+        "change_line_count": len(change_lines),
+    }
+
+
 def classify_planner_failure(message: str) -> dict[str, str]:
     normalized = message.strip()
     if normalized.startswith("Unable to reach "):
@@ -261,6 +334,33 @@ def classify_planner_failure(message: str) -> dict[str, str]:
     if normalized.startswith("Planner JSON response"):
         return {
             "category": "malformed_planner_payload",
+            "boundary": "provider_output",
+            "owner": "local_llm",
+        }
+    return {
+        "category": "unknown",
+        "boundary": "unknown",
+        "owner": "local_llm",
+    }
+
+
+def classify_draft_failure(message: str) -> dict[str, str]:
+    normalized = message.strip()
+    if normalized.startswith("Unable to reach "):
+        return {
+            "category": "runtime_unavailable",
+            "boundary": "provider_runtime",
+            "owner": "local_llm",
+        }
+    if normalized.startswith("Draft patch response"):
+        return {
+            "category": "malformed_draft_payload",
+            "boundary": "provider_output",
+            "owner": "local_llm",
+        }
+    if normalized.startswith("Draft patch "):
+        return {
+            "category": "invalid_diff_shape",
             "boundary": "provider_output",
             "owner": "local_llm",
         }
@@ -418,6 +518,59 @@ def run_planner_json_smoke(config: dict[str, str]) -> dict:
     }
 
 
+def run_draft_patch_smoke(config: dict[str, str]) -> dict:
+    prompt_payload = {
+        "instruction": "Add one bullet noting that local draft smoke is active.",
+        "path": "notes/local_llm_status.md",
+        "content": "# Local LLM Status\n\n- Planner smoke is active.\n",
+        "constraints": [
+            "return a single-file unified diff only",
+            "target the provided markdown path",
+            "keep the patch minimal",
+        ],
+    }
+    payload = {
+        "model": config["OLLAMA_CHAT_MODEL"],
+        "stream": False,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Return only JSON with a single key 'patch' whose value is a "
+                    "single-file unified diff for the provided markdown note."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(prompt_payload),
+            },
+        ],
+    }
+    response = request_json(
+        f"{config['OLLAMA_OPENAI_BASE_URL'].rstrip('/')}/chat/completions",
+        payload,
+        headers={"Authorization": f"Bearer {config['OLLAMA_API_KEY']}"},
+    )
+
+    choices = response.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError(f"Draft patch response missing choices: {response}")
+
+    message = choices[0].get("message", {})
+    content = message.get("content", "")
+    patch = parse_draft_patch_content(content)
+    validated = validate_draft_patch(patch)
+
+    return {
+        "model": response.get("model", config["OLLAMA_CHAT_MODEL"]),
+        "path": validated["path"],
+        "hunk_count": validated["hunk_count"],
+        "change_line_count": validated["change_line_count"],
+        "patch_preview": patch.splitlines()[0],
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run the local Ollama smoke path from WSL2.",
@@ -436,6 +589,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--planner-json-only",
         action="store_true",
         help="Run only the strict planner JSON smoke path.",
+    )
+    parser.add_argument(
+        "--draft-patch-only",
+        action="store_true",
+        help="Run only the workflow draft patch smoke path.",
     )
     return parser
 
@@ -473,10 +631,14 @@ def main() -> int:
         elif args.planner_json_only:
             result["planner_json"] = run_planner_json_smoke(config)
             result["status"] = "planner-json-passed"
+        elif args.draft_patch_only:
+            result["draft_patch"] = run_draft_patch_smoke(config)
+            result["status"] = "draft-patch-passed"
         else:
             result["embeddings"] = run_embeddings_smoke(config)
             result["chat"] = run_chat_smoke(config)
             result["planner_json"] = run_planner_json_smoke(config)
+            result["draft_patch"] = run_draft_patch_smoke(config)
             result["status"] = "smoke-passed"
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
