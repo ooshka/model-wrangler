@@ -26,3 +26,10 @@
 - Impact: initial agent validation depends on Ollama being installed, running, and preloaded with the baseline models outside the repo.
 - Trigger: when a fresh workstation or CI-like environment needs to reproduce the local baseline without prior host setup.
 - Planned handling: consider a small host setup note or helper script once the first Ollama baseline smoke path is stable.
+
+## 2026-03-21 (local draft smoke planning pass)
+
+1. Local workflow draft generation is still undocumented as executable provider evidence
+- Impact: `mirai` can now plan through the local provider seam, but the next patch-drafter handoff would still be forced to guess at local draft output shape and failure ownership.
+- Trigger: active now that the planner-provider seam has landed in `mirai` and the next self-hosted workflow step is draft generation.
+- Planned handling: add one bounded draft smoke mode and targeted tests/docs before any `mirai` local drafter wiring begins.

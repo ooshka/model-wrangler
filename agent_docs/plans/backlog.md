@@ -2,19 +2,22 @@
 
 ## Now
 
-No currently tracked items.
+1. Local Workflow Draft Patch Smoke Path
+- Type: `feature`
+- Value: establishes a repeatable local patch-drafting baseline and bounded failure behavior so `mirai` does not guess at the next self-hosted workflow seam.
+- Size: ~1 day.
 
 ## Next
 
-1. Mirai Planner Provider Handoff Case
-- Type: `feature`
-- Value: converts the validated local planner smoke path and parity expectations into a narrow `mirai` implementation slice.
-- Size: ~1 day.
-
-2. Local Retrieval Contract Exerciser
+1. Local Retrieval Contract Exerciser
 - Type: `feature`
 - Value: turns the documented retrieval artifact contract into a small runnable check so later local retrieval changes cannot drift silently.
 - Size: ~1 day.
+
+2. Mirai Patch Drafter Provider Handoff Support Note
+- Type: `docs`
+- Value: records the local draft-smoke assumptions and handoff constraints that the next `mirai` drafter-provider slice should preserve once the smoke path lands.
+- Size: ~0.5 day.
 
 ## Later
 
