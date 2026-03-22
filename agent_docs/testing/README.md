@@ -60,6 +60,8 @@ WSL2 verification commands:
   - `python3 scripts/ollama/smoke.py --check-only`
 - Planner JSON contract smoke:
   - `python3 scripts/ollama/smoke.py --planner-json-only`
+- Workflow draft patch smoke:
+  - `python3 scripts/ollama/smoke.py --draft-patch-only`
 - Full smoke path:
   - `python3 scripts/ollama/smoke.py`
 
@@ -70,6 +72,7 @@ Agent note:
 Expected result:
 - `--check-only` returns JSON with `"status": "runtime-ready"`.
 - `--planner-json-only` returns JSON with `"status": "planner-json-passed"` plus planner action count and first action name.
+- `--draft-patch-only` returns JSON with `"status": "draft-patch-passed"` plus markdown target path, hunk count, and changed-line count.
 - The full smoke command returns JSON with `"status": "smoke-passed"` plus embedding dimensions, a chat preview, and planner JSON summary fields.
 - The retrieval unit test passes with deterministic ranking and contract-shape checks.
 - The retrieval benchmark helper prints JSON with `chunk_count`, `note_count`, `embedding_dimensions`, `artifact_bytes`, `build_seconds`, `query_seconds`, and `top_result`.
@@ -91,6 +94,8 @@ Failure modes to report:
 - `127.0.0.1:11434` unreachable from WSL2.
 - One or both baseline models missing from the Windows-hosted Ollama instance.
 - Planner JSON responses that are non-JSON, omit `rationale` or `actions`, or return invalid action payload types.
+- Draft patch responses that are neither a non-empty unified diff nor a JSON object containing a non-empty `patch` string.
+- Draft patch outputs that target non-markdown paths, include traversal-like paths, or fail basic single-file unified-diff shape validation.
 - Planner parity failure categories should stay bounded to provider/runtime evidence such as `runtime_unavailable` and `malformed_planner_payload`; do not treat them as `mirai` API error-contract assertions.
 - Chat or embeddings requests returning non-JSON or empty payloads.
 - Retrieval ranking returning zero-score chunks, unstable tie ordering, or malformed provider artifact fields.
