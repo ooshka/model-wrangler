@@ -11,9 +11,9 @@ No currently tracked items.
 - Value: turns the documented retrieval artifact contract into a small runnable check so later local retrieval changes cannot drift silently.
 - Size: ~1 day.
 
-2. Mirai Patch Drafter Provider Handoff Support Note
-- Type: `docs`
-- Value: records the local draft-smoke assumptions and handoff constraints that the next `mirai` drafter-provider slice should preserve once the smoke path lands.
+2. Local Workflow Failure Fixture Pack
+- Type: `feature`
+- Value: turns planner/drafter runtime failure categories into runnable local evidence so the next `mirai` workflow execution slice can map self-hosted failures without guessing.
 - Size: ~0.5 day.
 
 ## Later

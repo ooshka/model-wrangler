@@ -11,6 +11,7 @@ Project boundaries:
 - Preserve `mirai` as the owner of MCP contracts, safety policy, and endpoint semantics.
 - Keep retrieval and planner/drafter model concerns as separate provider seams, matching the current `mirai` architecture.
 - Favor small vertical slices that produce runnable artifacts over broad comparison docs or premature abstraction.
+- Prefer runnable evidence that directly unblocks `mirai`'s next execution or retrieval slice over standalone support notes when the uncertainty can be captured in fixtures or smoke paths.
 - Defer default-provider decisions in `mirai` until local parity expectations and failure behavior are documented here.
 
 ## Delivery Path
@@ -34,7 +35,7 @@ Project boundaries:
 
 5. Parity fixtures and failure contracts
 - Build reusable prompt/retrieval fixtures that compare local-provider outputs against the current OpenAI-backed shapes.
-- Document expected fallback behavior when local models are unavailable, overloaded, or misconfigured.
+- Prefer executable failure fixtures over prose-only notes when `mirai` needs bounded evidence about unavailable, overloaded, or malformed local runtime behavior.
 
 6. `mirai` integration handoff
 - Convert validated local stack decisions into narrow `mirai` cases for provider wiring.
@@ -44,4 +45,5 @@ Project boundaries:
 
 - A documented Ollama setup runs locally with the expected model names, host/WSL split, and hardware assumptions.
 - The repo contains a repeatable smoke path for local embeddings and planner-style generation calls.
+- The next few slices should leave behind runnable evidence that `mirai` can consume directly, not just explanatory notes.
 - Roadmap follow-ons are feature-led: local provider capability first, hardening and parity checks immediately after.
