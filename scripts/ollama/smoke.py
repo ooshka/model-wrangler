@@ -371,6 +371,56 @@ def classify_draft_failure(message: str) -> dict[str, str]:
     }
 
 
+def validate_failure_expectations(
+    raw_expectations: list,
+    *,
+    classifier,
+    label: str,
+) -> list[dict[str, str]]:
+    if not isinstance(raw_expectations, list) or not raw_expectations:
+        raise ValueError(f"Fixture must include a non-empty '{label}' array.")
+
+    summaries = []
+    for item in raw_expectations:
+        if not isinstance(item, dict):
+            raise ValueError(f"Each entry in '{label}' must be an object.")
+
+        name = item.get("name")
+        message = item.get("message")
+        expected_category = item.get("expected_category")
+        expected_boundary = item.get("expected_boundary")
+        expected_owner = item.get("expected_owner")
+        if not all(isinstance(value, str) and value for value in (
+            name,
+            message,
+            expected_category,
+            expected_boundary,
+            expected_owner,
+        )):
+            raise ValueError(
+                f"Each entry in '{label}' must include non-empty name, message, "
+                "expected_category, expected_boundary, and expected_owner strings."
+            )
+
+        summary = classifier(message)
+        if summary["category"] != expected_category:
+            raise RuntimeError(
+                f"{label} category mismatch for '{name}'."
+            )
+        if summary["boundary"] != expected_boundary:
+            raise RuntimeError(
+                f"{label} boundary mismatch for '{name}'."
+            )
+        if summary["owner"] != expected_owner:
+            raise RuntimeError(
+                f"{label} owner mismatch for '{name}'."
+            )
+
+        summaries.append({"name": name, **summary})
+
+    return summaries
+
+
 def run_planner_parity_fixture(fixture_path: Path | str) -> dict:
     fixture_path = Path(fixture_path)
     payload = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -429,29 +479,11 @@ def run_planner_parity_fixture(fixture_path: Path | str) -> dict:
     else:
         raise RuntimeError("Planner parity fixture invalid_json_payload unexpectedly parsed.")
 
-    raw_failure_expectations = payload.get("failure_expectations")
-    if not isinstance(raw_failure_expectations, list) or not raw_failure_expectations:
-        raise ValueError("Fixture must include a non-empty 'failure_expectations' array.")
-
-    failure_expectations = []
-    for item in raw_failure_expectations:
-        if not isinstance(item, dict):
-            raise ValueError("Each failure expectation must be an object.")
-        summary = classify_planner_failure(item["message"])
-        if summary["category"] != item["expected_category"]:
-            raise RuntimeError(
-                f"Planner parity fixture category mismatch for '{item['name']}'."
-            )
-        if summary["boundary"] != item["expected_boundary"]:
-            raise RuntimeError(
-                f"Planner parity fixture boundary mismatch for '{item['name']}'."
-            )
-        failure_expectations.append(
-            {
-                "name": item["name"],
-                **summary,
-            }
-        )
+    failure_expectations = validate_failure_expectations(
+        payload.get("failure_expectations"),
+        classifier=classify_planner_failure,
+        label="Planner parity fixture failure_expectations",
+    )
 
     return {
         "mode": "planner_parity_fixture",
@@ -461,6 +493,32 @@ def run_planner_parity_fixture(fixture_path: Path | str) -> dict:
         "action_count": len(validated["actions"]),
         "first_action": actual_first_action["action"],
         "failure_expectations": failure_expectations,
+    }
+
+
+def run_workflow_failure_fixture(fixture_path: Path | str) -> dict:
+    fixture_path = Path(fixture_path)
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Fixture must be a JSON object.")
+
+    planner_failures = validate_failure_expectations(
+        payload.get("planner_failure_expectations"),
+        classifier=classify_planner_failure,
+        label="Workflow failure fixture planner_failure_expectations",
+    )
+    draft_failures = validate_failure_expectations(
+        payload.get("draft_failure_expectations"),
+        classifier=classify_draft_failure,
+        label="Workflow failure fixture draft_failure_expectations",
+    )
+
+    return {
+        "mode": "workflow_failure_fixture",
+        "fixture_path": str(fixture_path),
+        "status": "workflow-failure-fixture-passed",
+        "planner_failure_expectations": planner_failures,
+        "draft_failure_expectations": draft_failures,
     }
 
 
@@ -595,12 +653,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run only the workflow draft patch smoke path.",
     )
+    parser.add_argument(
+        "--workflow-failure-fixture-only",
+        action="store_true",
+        help="Run only the local workflow failure fixture check.",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     config = load_config()
+    workflow_failure_fixture_path = ROOT / "tests" / "fixtures" / "workflow_failure_fixture.json"
 
     if args.print_config:
         printable = {
@@ -611,6 +675,19 @@ def main() -> int:
             "LOCAL_ENV_PRESENT": str(LOCAL_ENV.exists()).lower(),
         }
         print(json.dumps(printable, indent=2, sort_keys=True))
+        return 0
+
+    if args.workflow_failure_fixture_only:
+        try:
+            result = run_workflow_failure_fixture(workflow_failure_fixture_path)
+        except RuntimeError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
 
     try:

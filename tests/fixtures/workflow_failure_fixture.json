@@ -1,0 +1,41 @@
+{
+  "planner_failure_expectations": [
+    {
+      "name": "runtime_unavailable",
+      "message": "Unable to reach http://127.0.0.1:11434/v1/chat/completions: [Errno 111] Connection refused",
+      "expected_category": "runtime_unavailable",
+      "expected_boundary": "provider_runtime",
+      "expected_owner": "local_llm"
+    },
+    {
+      "name": "malformed_planner_payload",
+      "message": "Planner JSON response was not valid JSON.",
+      "expected_category": "malformed_planner_payload",
+      "expected_boundary": "provider_output",
+      "expected_owner": "local_llm"
+    }
+  ],
+  "draft_failure_expectations": [
+    {
+      "name": "runtime_unavailable",
+      "message": "Unable to reach http://127.0.0.1:11434/v1/chat/completions: [Errno 111] Connection refused",
+      "expected_category": "runtime_unavailable",
+      "expected_boundary": "provider_runtime",
+      "expected_owner": "local_llm"
+    },
+    {
+      "name": "malformed_draft_payload",
+      "message": "Draft patch response missing non-empty 'patch' string.",
+      "expected_category": "malformed_draft_payload",
+      "expected_boundary": "provider_output",
+      "expected_owner": "local_llm"
+    },
+    {
+      "name": "invalid_diff_shape",
+      "message": "Draft patch must contain exactly one diff hunk.",
+      "expected_category": "invalid_diff_shape",
+      "expected_boundary": "provider_output",
+      "expected_owner": "local_llm"
+    }
+  ]
+}

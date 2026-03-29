@@ -99,7 +99,11 @@ WSL2 workflow:
    ```bash
    python3 scripts/ollama/smoke.py --draft-patch-only
    ```
-6. Run the full smoke path for embeddings, planner-style chat, strict planner JSON, and draft patch smoke:
+6. Run the workflow failure fixture check that validates project-owned planner/drafter failure expectations without calling the live runtime:
+   ```bash
+   python3 scripts/ollama/smoke.py --workflow-failure-fixture-only
+   ```
+7. Run the full smoke path for embeddings, planner-style chat, strict planner JSON, and draft patch smoke:
    ```bash
    python3 scripts/ollama/smoke.py
    ```
@@ -110,6 +114,11 @@ The draft smoke path validates only the local provider boundary needed for the n
 - the response must contain a non-empty unified diff, either directly or inside a JSON `patch` field
 - the diff must target one markdown path with one hunk and at least one changed line
 - failure interpretation stays local to runtime/provider evidence; it does not assert `mirai` endpoint error envelopes
+
+The workflow failure fixture check validates only local ownership expectations for planner and draft failures:
+- planner and drafter failures stay scoped to local `category`, `boundary`, and `owner` summaries
+- the command is fixture-driven and does not require a running Ollama instance
+- it does not assert any `mirai` endpoint or MCP error-envelope behavior
 
 ## Retrieval Baseline
 
