@@ -2,10 +2,7 @@
 
 ## Now
 
-1. Local Workflow Failure Fixture Pack
-- Type: `feature`
-- Value: turns planner/drafter runtime failure categories into runnable local evidence so the next `mirai` workflow execution slice can map self-hosted failures without guessing.
-- Size: ~0.5 day.
+No currently tracked items.
 
 ## Next
 

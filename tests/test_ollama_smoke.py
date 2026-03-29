@@ -9,6 +9,7 @@ from scripts.ollama.smoke import (
     model_name_variants,
     parse_planner_json_content,
     run_planner_parity_fixture,
+    run_workflow_failure_fixture,
     validate_draft_patch,
     validate_planner_payload,
 )
@@ -343,6 +344,63 @@ class PlannerParityFixtureTests(unittest.TestCase):
                 "first_action did not match expected output",
             ):
                 run_planner_parity_fixture(fixture_path)
+
+
+class WorkflowFailureFixtureTests(unittest.TestCase):
+    def test_reports_expected_summary(self) -> None:
+        result = run_workflow_failure_fixture(FIXTURES_DIR / "workflow_failure_fixture.json")
+
+        self.assertEqual(result["mode"], "workflow_failure_fixture")
+        self.assertEqual(result["status"], "workflow-failure-fixture-passed")
+        self.assertEqual(len(result["planner_failure_expectations"]), 2)
+        self.assertEqual(len(result["draft_failure_expectations"]), 3)
+        self.assertEqual(
+            result["draft_failure_expectations"][0],
+            {
+                "name": "runtime_unavailable",
+                "category": "runtime_unavailable",
+                "boundary": "provider_runtime",
+                "owner": "local_llm",
+            },
+        )
+
+    def test_raises_on_expected_owner_mismatch(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+
+        fixture_payload = {
+            "planner_failure_expectations": [
+                {
+                    "name": "runtime_unavailable",
+                    "message": (
+                        "Unable to reach http://127.0.0.1:11434/v1/chat/completions: "
+                        "[Errno 111] Connection refused"
+                    ),
+                    "expected_category": "runtime_unavailable",
+                    "expected_boundary": "provider_runtime",
+                    "expected_owner": "mirai",
+                }
+            ],
+            "draft_failure_expectations": [
+                {
+                    "name": "invalid_diff_shape",
+                    "message": "Draft patch must contain exactly one diff hunk.",
+                    "expected_category": "invalid_diff_shape",
+                    "expected_boundary": "provider_output",
+                    "expected_owner": "local_llm",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            fixture_path = Path(tempdir) / "workflow_failure_bad.json"
+            fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "planner_failure_expectations owner mismatch",
+            ):
+                run_workflow_failure_fixture(fixture_path)
 
 
 if __name__ == "__main__":
