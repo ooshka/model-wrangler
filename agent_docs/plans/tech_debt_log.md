@@ -20,7 +20,7 @@
 4. Planner reliability beyond single-smoke coverage is still unproven locally
 - Impact: one successful structured-output smoke path does not yet establish behavior across varied intents, larger contexts, or fallback scenarios.
 - Trigger: becomes important once `mirai` adapter work or parity-fixture work is about to begin.
-- Planned handling: keep the current planner JSON smoke as the baseline proof, then add parity fixtures or broader reliability checks only when they unblock concrete integration work.
+- Planned handling: keep the current planner JSON smoke as the baseline proof, then add the bounded workflow failure fixture pack for planner/drafter ownership before any broader reliability expansion.
 
 5. Windows host bootstrap is still manual
 - Impact: initial agent validation depends on Ollama being installed, running, and preloaded with the baseline models outside the repo.
