@@ -2,10 +2,7 @@
 
 ## Now
 
-1. Local Workflow Edit Intent Smoke Path
-- Type: `feature`
-- Value: proves the local workflow model can return strict `edit_intent` JSON aligned with the merged `mirai` draft contract, reducing the risk that self-hosted workflow execution stalls on malformed output shape.
-- Size: ~1 day.
+No currently tracked items.
 
 ## Next
 
