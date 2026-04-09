@@ -95,24 +95,26 @@ WSL2 workflow:
    ```bash
    python3 scripts/ollama/smoke.py --planner-json-only
    ```
-5. Run the workflow draft patch smoke path that exercises a bounded single-file unified-diff response:
+5. Run the workflow edit-intent smoke path that exercises the current `mirai` draft contract:
    ```bash
-   python3 scripts/ollama/smoke.py --draft-patch-only
+   python3 scripts/ollama/smoke.py --edit-intent-only
    ```
 6. Run the workflow failure fixture check that validates project-owned planner/drafter failure expectations without calling the live runtime:
    ```bash
    python3 scripts/ollama/smoke.py --workflow-failure-fixture-only
    ```
-7. Run the full smoke path for embeddings, planner-style chat, strict planner JSON, and draft patch smoke:
+7. Run the full smoke path for embeddings, planner-style chat, strict planner JSON, and workflow edit-intent smoke:
    ```bash
    python3 scripts/ollama/smoke.py
    ```
 
 The smoke script defaults already point at `127.0.0.1`, so most workstations should not need any local config override.
 
-The draft smoke path validates only the local provider boundary needed for the next `mirai` handoff:
-- the response must contain a non-empty unified diff, either directly or inside a JSON `patch` field
-- the diff must target one markdown path with one hunk and at least one changed line
+The workflow edit-intent smoke path validates only the local provider boundary needed for the next `mirai` handoff:
+- the response must be JSON with a top-level `edit_intent` object
+- `edit_intent.path` must target the requested markdown path without traversal
+- `edit_intent.operation` must be `replace_content`
+- `edit_intent.content` must be a string suitable for full-note replacement
 - failure interpretation stays local to runtime/provider evidence; it does not assert `mirai` endpoint error envelopes
 
 The workflow failure fixture check validates only local ownership expectations for planner and draft failures:

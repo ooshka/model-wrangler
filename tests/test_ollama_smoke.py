@@ -4,13 +4,14 @@ from pathlib import Path
 from scripts.ollama.smoke import (
     classify_draft_failure,
     classify_planner_failure,
-    parse_draft_patch_content,
     ensure_model_present,
     model_name_variants,
+    normalize_note_content,
+    parse_edit_intent_content,
     parse_planner_json_content,
     run_planner_parity_fixture,
     run_workflow_failure_fixture,
-    validate_draft_patch,
+    validate_edit_intent,
     validate_planner_payload,
 )
 
@@ -66,26 +67,32 @@ class ParsePlannerJsonContentTests(unittest.TestCase):
         )
 
 
-class ParseDraftPatchContentTests(unittest.TestCase):
-    def test_accepts_unified_diff_text(self) -> None:
-        patch = """--- a/notes/today.md
-+++ b/notes/today.md
-@@ -1 +1,2 @@
- alpha
-+beta
-"""
-        self.assertEqual(parse_draft_patch_content(patch), patch.strip())
-
-    def test_extracts_patch_from_json_object(self) -> None:
-        content = '{"patch":"--- a/notes/today.md\\n+++ b/notes/today.md\\n@@ -1 +1,2 @@\\n alpha\\n+beta\\n"}'
-        self.assertIn("--- a/notes/today.md", parse_draft_patch_content(content))
-
-    def test_rejects_missing_patch_field(self) -> None:
+class ParseEditIntentContentTests(unittest.TestCase):
+    def test_rejects_non_json_content(self) -> None:
         with self.assertRaisesRegex(
             RuntimeError,
-            "missing non-empty 'patch' string",
+            "Draft response was not valid JSON.",
         ):
-            parse_draft_patch_content("{}")
+            parse_edit_intent_content("not json")
+
+    def test_rejects_non_object_payload(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Draft response must be a JSON object.",
+        ):
+            parse_edit_intent_content('["array"]')
+
+    def test_accepts_object_payload(self) -> None:
+        self.assertEqual(
+            parse_edit_intent_content('{"edit_intent":{"path":"notes/today.md","operation":"replace_content","content":"ok"}}'),
+            {
+                "edit_intent": {
+                    "path": "notes/today.md",
+                    "operation": "replace_content",
+                    "content": "ok",
+                }
+            },
+        )
 
 
 class ValidatePlannerPayloadTests(unittest.TestCase):
@@ -185,55 +192,86 @@ class ValidatePlannerPayloadTests(unittest.TestCase):
         )
 
 
-class ValidateDraftPatchTests(unittest.TestCase):
-    def test_accepts_single_file_markdown_diff(self) -> None:
-        result = validate_draft_patch(
-            """--- a/notes/today.md
-+++ b/notes/today.md
-@@ -1 +1,2 @@
- alpha
-+beta
-"""
+class NormalizeNoteContentTests(unittest.TestCase):
+    def test_adds_trailing_newline_when_missing(self) -> None:
+        self.assertEqual(normalize_note_content("alpha"), "alpha\n")
+
+    def test_normalizes_windows_newlines(self) -> None:
+        self.assertEqual(normalize_note_content("alpha\r\nbeta"), "alpha\nbeta\n")
+
+
+class ValidateEditIntentTests(unittest.TestCase):
+    def test_accepts_replace_content_markdown_intent(self) -> None:
+        result = validate_edit_intent(
+            {
+                "edit_intent": {
+                    "path": "notes/today.md",
+                    "operation": "replace_content",
+                    "content": "# Today\n\n- Done",
+                }
+            },
+            expected_path="notes/today.md",
         )
         self.assertEqual(
             result,
             {
                 "path": "notes/today.md",
-                "hunk_count": 1,
-                "line_count": 5,
-                "change_line_count": 1,
+                "operation": "replace_content",
+                "content": "# Today\n\n- Done\n",
             },
         )
+
+    def test_rejects_missing_edit_intent_object(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "missing edit_intent object",
+        ):
+            validate_edit_intent({})
 
     def test_rejects_non_markdown_target(self) -> None:
         with self.assertRaisesRegex(
             RuntimeError,
             "markdown file",
         ):
-            validate_draft_patch(
-                """--- a/notes/today.txt
-+++ b/notes/today.txt
-@@ -1 +1,2 @@
- alpha
-+beta
-"""
+            validate_edit_intent(
+                {
+                    "edit_intent": {
+                        "path": "notes/today.txt",
+                        "operation": "replace_content",
+                        "content": "alpha",
+                    }
+                }
             )
 
-    def test_rejects_multi_hunk_patch(self) -> None:
+    def test_rejects_path_mismatch(self) -> None:
         with self.assertRaisesRegex(
             RuntimeError,
-            "exactly one diff hunk",
+            "must match the requested path",
         ):
-            validate_draft_patch(
-                """--- a/notes/today.md
-+++ b/notes/today.md
-@@ -1 +1,2 @@
- alpha
-+beta
-@@ -4 +5,2 @@
- gamma
-+delta
-"""
+            validate_edit_intent(
+                {
+                    "edit_intent": {
+                        "path": "notes/other.md",
+                        "operation": "replace_content",
+                        "content": "alpha",
+                    }
+                },
+                expected_path="notes/today.md",
+            )
+
+    def test_rejects_unsupported_operation(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "operation is unsupported",
+        ):
+            validate_edit_intent(
+                {
+                    "edit_intent": {
+                        "path": "notes/today.md",
+                        "operation": "append_content",
+                        "content": "alpha",
+                    }
+                }
             )
 
 
@@ -276,7 +314,7 @@ class DraftFailureClassificationTests(unittest.TestCase):
 
     def test_classifies_malformed_payload_failure(self) -> None:
         self.assertEqual(
-            classify_draft_failure("Draft patch response missing non-empty 'patch' string."),
+            classify_draft_failure("Draft response missing edit_intent object."),
             {
                 "category": "malformed_draft_payload",
                 "boundary": "provider_output",
@@ -284,11 +322,11 @@ class DraftFailureClassificationTests(unittest.TestCase):
             },
         )
 
-    def test_classifies_invalid_diff_shape_failure(self) -> None:
+    def test_classifies_invalid_edit_intent_shape_failure(self) -> None:
         self.assertEqual(
-            classify_draft_failure("Draft patch must contain exactly one diff hunk."),
+            classify_draft_failure("Edit intent path must target a markdown file."),
             {
-                "category": "invalid_diff_shape",
+                "category": "invalid_edit_intent_shape",
                 "boundary": "provider_output",
                 "owner": "local_llm",
             },
@@ -384,9 +422,9 @@ class WorkflowFailureFixtureTests(unittest.TestCase):
             ],
             "draft_failure_expectations": [
                 {
-                    "name": "invalid_diff_shape",
-                    "message": "Draft patch must contain exactly one diff hunk.",
-                    "expected_category": "invalid_diff_shape",
+                    "name": "invalid_edit_intent_shape",
+                    "message": "Edit intent path must target a markdown file.",
+                    "expected_category": "invalid_edit_intent_shape",
                     "expected_boundary": "provider_output",
                     "expected_owner": "local_llm",
                 }

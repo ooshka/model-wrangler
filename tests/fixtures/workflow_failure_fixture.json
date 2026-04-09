@@ -25,15 +25,15 @@
     },
     {
       "name": "malformed_draft_payload",
-      "message": "Draft patch response missing non-empty 'patch' string.",
+      "message": "Draft response missing edit_intent object.",
       "expected_category": "malformed_draft_payload",
       "expected_boundary": "provider_output",
       "expected_owner": "local_llm"
     },
     {
-      "name": "invalid_diff_shape",
-      "message": "Draft patch must contain exactly one diff hunk.",
-      "expected_category": "invalid_diff_shape",
+      "name": "invalid_edit_intent_shape",
+      "message": "Edit intent path must target a markdown file.",
+      "expected_category": "invalid_edit_intent_shape",
       "expected_boundary": "provider_output",
       "expected_owner": "local_llm"
     }
