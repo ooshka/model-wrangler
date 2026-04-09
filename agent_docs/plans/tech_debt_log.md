@@ -27,9 +27,9 @@
 - Trigger: when a fresh workstation or CI-like environment needs to reproduce the local baseline without prior host setup.
 - Planned handling: consider a small host setup note or helper script once the first Ollama baseline smoke path is stable.
 
-## 2026-03-21 (local draft smoke planning pass)
+## 2026-04-08 (workflow edit-intent planning pass)
 
-1. Local workflow draft generation is still undocumented as executable provider evidence
-- Impact: `mirai` can now plan through the local provider seam, but the next patch-drafter handoff would still be forced to guess at local draft output shape and failure ownership.
-- Trigger: active now that the planner-provider seam has landed in `mirai` and the next self-hosted workflow step is draft generation.
-- Planned handling: add one bounded draft smoke mode and targeted tests/docs before any `mirai` local drafter wiring begins.
+1. Local workflow edit-intent evidence is still missing after the `mirai` contract pivot
+- Impact: `mirai` now owns a strict `edit_intent` draft contract, but this repo still documents and exercises the older unified-diff draft path, leaving the next self-hosted drafter handoff without current runtime evidence.
+- Trigger: active now that `mirai` has merged the `edit_intent` contract and the next local-provider slice needs contract-shaped JSON proof rather than patch-text experiments.
+- Planned handling: replace the current draft smoke with one bounded `edit_intent` smoke path, then add a small reliability fixture pack if prompt/output drift remains an issue.

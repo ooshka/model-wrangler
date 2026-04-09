@@ -27,6 +27,7 @@ Project boundaries:
 3. Planner/drafter model baseline
 - Add a planner-oriented local generation path that can return strict JSON for orchestration-style outputs.
 - Record model sizing and latency tradeoffs on the target hardware for bounded-context use.
+- Pivot draft generation away from model-authored unified diffs toward a strict `edit_intent` JSON response that mirrors the `mirai` contract once that contract is defined.
 
 4. Retrieval quality shaping
 - Start with an exact local retrieval baseline using persisted embeddings and simple in-process ranking.
@@ -39,11 +40,12 @@ Project boundaries:
 
 6. `mirai` integration handoff
 - Convert validated local stack decisions into narrow `mirai` cases for provider wiring.
-- Keep integration slices small: retrieval seam first, planner seam second, defaults only after parity evidence exists.
+- Keep integration slices small: retrieval seam first, planner seam second, workflow edit-intent evidence before any local draft/apply defaulting, and defaults only after parity evidence exists.
 
 ## Near-Term Success Criteria
 
 - A documented Ollama setup runs locally with the expected model names, host/WSL split, and hardware assumptions.
 - The repo contains a repeatable smoke path for local embeddings and planner-style generation calls.
+- The next workflow-output slice proves the local model can return contract-shaped `edit_intent` JSON more reliably than unified diff text for the bounded note-update seam.
 - The next few slices should leave behind runnable evidence that `mirai` can consume directly, not just explanatory notes.
 - Roadmap follow-ons are feature-led: local provider capability first, hardening and parity checks immediately after.
