@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.request
@@ -16,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE_ENV = ROOT / "config" / "ollama.env.example"
 LOCAL_ENV = ROOT / "config" / "ollama.env"
-UNIFIED_DIFF_PATH_RE = re.compile(r"^(---|\+\+\+) [ab]/(.+)$")
+EDIT_INTENT_REPLACE_CONTENT = "replace_content"
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -252,74 +251,59 @@ def validate_planner_payload(payload: dict) -> dict:
     }
 
 
-def parse_draft_patch_content(content: str) -> str:
+def parse_edit_intent_content(content: str) -> dict:
     if not isinstance(content, str) or not content.strip():
-        raise RuntimeError("Draft patch response missing message content.")
-
-    normalized = content.strip()
-    if normalized.startswith("--- "):
-        return normalized
+        raise RuntimeError("Draft response missing message content.")
 
     try:
-        payload = json.loads(normalized)
+        payload = json.loads(content)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("Draft patch response was not valid JSON or unified diff text.") from exc
+        raise RuntimeError("Draft response was not valid JSON.") from exc
 
     if not isinstance(payload, dict):
-        raise RuntimeError("Draft patch response must be a JSON object or unified diff text.")
+        raise RuntimeError("Draft response must be a JSON object.")
 
-    patch = payload.get("patch")
-    if not isinstance(patch, str) or not patch.strip():
-        raise RuntimeError("Draft patch response missing non-empty 'patch' string.")
-
-    return patch.strip()
+    return payload
 
 
-def validate_draft_patch(patch: str) -> dict:
-    if not isinstance(patch, str) or not patch.strip():
-        raise RuntimeError("Draft patch must be a non-empty string.")
+def normalize_note_content(content: str) -> str:
+    normalized = content.replace("\r\n", "\n")
+    if not normalized or normalized.endswith("\n"):
+        return normalized
+    return f"{normalized}\n"
 
-    lines = patch.strip().splitlines()
-    if len(lines) < 3:
-        raise RuntimeError("Draft patch must be a unified diff with header and hunk.")
 
-    source_index = next((index for index, line in enumerate(lines) if line.startswith("--- ")), None)
-    if source_index is None or source_index + 1 >= len(lines):
-        raise RuntimeError("Draft patch missing valid '--- a/<path>' header.")
+def validate_edit_intent(payload: dict, *, expected_path: str | None = None) -> dict:
+    edit_intent = payload.get("edit_intent")
+    if not isinstance(edit_intent, dict):
+        raise RuntimeError("Draft response missing edit_intent object.")
 
-    source_match = UNIFIED_DIFF_PATH_RE.match(lines[source_index])
-    target_match = UNIFIED_DIFF_PATH_RE.match(lines[source_index + 1])
-    if source_match is None or source_match.group(1) != "---":
-        raise RuntimeError("Draft patch missing valid '--- a/<path>' header.")
-    if target_match is None or target_match.group(1) != "+++":
-        raise RuntimeError("Draft patch missing valid '+++ b/<path>' header.")
+    path = edit_intent.get("path")
+    if not isinstance(path, str) or not path.strip():
+        raise RuntimeError("Edit intent path is required.")
+    path = path.strip()
+    if not path.endswith(".md"):
+        raise RuntimeError("Edit intent path must target a markdown file.")
+    if ".." in Path(path).parts:
+        raise RuntimeError("Edit intent path must be repo-relative without traversal.")
+    if expected_path is not None and path != expected_path:
+        raise RuntimeError("Edit intent path must match the requested path.")
 
-    source_path = source_match.group(2)
-    target_path = target_match.group(2)
-    if source_path != target_path:
-        raise RuntimeError("Draft patch must target the same path in both diff headers.")
-    if not source_path.endswith(".md"):
-        raise RuntimeError("Draft patch path must target a markdown file.")
-    if ".." in Path(source_path).parts:
-        raise RuntimeError("Draft patch path must be repo-relative without traversal.")
+    operation = edit_intent.get("operation")
+    if not isinstance(operation, str) or not operation.strip():
+        raise RuntimeError("Edit intent operation is required.")
+    operation = operation.strip()
+    if operation != EDIT_INTENT_REPLACE_CONTENT:
+        raise RuntimeError("Edit intent operation is unsupported.")
 
-    body_lines = lines[source_index + 2:]
-    hunk_count = sum(1 for line in body_lines if line.startswith("@@"))
-    if hunk_count != 1:
-        raise RuntimeError("Draft patch must contain exactly one diff hunk.")
-
-    change_lines = [
-        line for line in body_lines
-        if line.startswith("+") or line.startswith("-")
-    ]
-    if not change_lines:
-        raise RuntimeError("Draft patch must contain at least one changed line.")
+    content = edit_intent.get("content")
+    if not isinstance(content, str):
+        raise RuntimeError("Edit intent content must be a string.")
 
     return {
-        "path": source_path,
-        "hunk_count": hunk_count,
-        "line_count": len(lines),
-        "change_line_count": len(change_lines),
+        "path": path,
+        "operation": operation,
+        "content": normalize_note_content(content),
     }
 
 
@@ -352,15 +336,15 @@ def classify_draft_failure(message: str) -> dict[str, str]:
             "boundary": "provider_runtime",
             "owner": "local_llm",
         }
-    if normalized.startswith("Draft patch response"):
+    if normalized.startswith("Draft response"):
         return {
             "category": "malformed_draft_payload",
             "boundary": "provider_output",
             "owner": "local_llm",
         }
-    if normalized.startswith("Draft patch "):
+    if normalized.startswith("Edit intent "):
         return {
-            "category": "invalid_diff_shape",
+            "category": "invalid_edit_intent_shape",
             "boundary": "provider_output",
             "owner": "local_llm",
         }
@@ -576,15 +560,17 @@ def run_planner_json_smoke(config: dict[str, str]) -> dict:
     }
 
 
-def run_draft_patch_smoke(config: dict[str, str]) -> dict:
+def run_edit_intent_smoke(config: dict[str, str]) -> dict:
+    target_path = "notes/local_llm_status.md"
     prompt_payload = {
-        "instruction": "Add one bullet noting that local draft smoke is active.",
-        "path": "notes/local_llm_status.md",
+        "instruction": "Add one bullet noting that local edit-intent smoke is active.",
+        "path": target_path,
         "content": "# Local LLM Status\n\n- Planner smoke is active.\n",
         "constraints": [
-            "return a single-file unified diff only",
+            "return only json with an edit_intent object",
             "target the provided markdown path",
-            "keep the patch minimal",
+            "use operation replace_content",
+            "return the full replacement note content",
         ],
     }
     payload = {
@@ -595,8 +581,9 @@ def run_draft_patch_smoke(config: dict[str, str]) -> dict:
             {
                 "role": "system",
                 "content": (
-                    "Return only JSON with a single key 'patch' whose value is a "
-                    "single-file unified diff for the provided markdown note."
+                    "Return only JSON with top-level key edit_intent. "
+                    "edit_intent must contain path, operation, and content. "
+                    "Use operation replace_content and keep the path exactly as provided."
                 ),
             },
             {
@@ -613,19 +600,19 @@ def run_draft_patch_smoke(config: dict[str, str]) -> dict:
 
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices:
-        raise RuntimeError(f"Draft patch response missing choices: {response}")
+        raise RuntimeError(f"Draft response missing choices: {response}")
 
     message = choices[0].get("message", {})
     content = message.get("content", "")
-    patch = parse_draft_patch_content(content)
-    validated = validate_draft_patch(patch)
+    parsed = parse_edit_intent_content(content)
+    validated = validate_edit_intent(parsed, expected_path=target_path)
 
     return {
         "model": response.get("model", config["OLLAMA_CHAT_MODEL"]),
         "path": validated["path"],
-        "hunk_count": validated["hunk_count"],
-        "change_line_count": validated["change_line_count"],
-        "patch_preview": patch.splitlines()[0],
+        "operation": validated["operation"],
+        "content_length": len(validated["content"]),
+        "content_preview": validated["content"].splitlines()[0] if validated["content"] else "",
     }
 
 
@@ -649,9 +636,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run only the strict planner JSON smoke path.",
     )
     parser.add_argument(
-        "--draft-patch-only",
+        "--edit-intent-only",
         action="store_true",
-        help="Run only the workflow draft patch smoke path.",
+        help="Run only the workflow edit_intent smoke path.",
     )
     parser.add_argument(
         "--workflow-failure-fixture-only",
@@ -708,14 +695,14 @@ def main() -> int:
         elif args.planner_json_only:
             result["planner_json"] = run_planner_json_smoke(config)
             result["status"] = "planner-json-passed"
-        elif args.draft_patch_only:
-            result["draft_patch"] = run_draft_patch_smoke(config)
-            result["status"] = "draft-patch-passed"
+        elif args.edit_intent_only:
+            result["edit_intent"] = run_edit_intent_smoke(config)
+            result["status"] = "edit-intent-passed"
         else:
             result["embeddings"] = run_embeddings_smoke(config)
             result["chat"] = run_chat_smoke(config)
             result["planner_json"] = run_planner_json_smoke(config)
-            result["draft_patch"] = run_draft_patch_smoke(config)
+            result["edit_intent"] = run_edit_intent_smoke(config)
             result["status"] = "smoke-passed"
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
