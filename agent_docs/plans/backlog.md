@@ -16,6 +16,11 @@ No currently tracked items.
 - Value: adds a small project-owned fixture set for malformed and near-miss `edit_intent` responses once the basic smoke path exists, so later local drafter tuning can be checked without live prompt guesswork.
 - Size: ~1 day.
 
+3. Local Workflow Model Capability Matrix
+- Type: `feature`
+- Value: records runnable smoke evidence for local workflow models by named `mirai` capability, so later `mirai` model/profile routing can choose a local model for the safe subset without relying on raw model size.
+- Size: ~1 day.
+
 ## Later
 
 1. Windows Host Bootstrap Note Or Helper

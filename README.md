@@ -1,10 +1,10 @@
 # local_llm
 
-Experimental local model workspace for the self-hosted LLM phase of `mirai`.
+Experimental local model workspace for the self-hosted LLM and multi-model workflow phase of `mirai`.
 
 ## Purpose
 
-This repository exists to evaluate and harden the local-model stack needed to support `mirai` without depending on hosted model providers.
+This repository exists to evaluate and harden the local-model stack needed to support `mirai` without depending on hosted model providers for every workflow stage.
 
 Current workstation baseline:
 - keep the repository, scripts, and agent workflow in WSL2
@@ -15,6 +15,7 @@ Initial goals:
 - identify a practical local LLM runtime for planning and patch-drafting workflows
 - establish a local embedding and vector-index strategy that can support retrieval parity checks
 - document operational constraints, configuration, and test workflows before wiring the provider into `mirai`
+- produce runnable evidence about which local models are suitable for named `mirai` workflow capabilities, such as strict JSON edit intents, single-note edits, or multi-step planning
 
 Current retrieval baseline direction:
 - persist chunk metadata and embeddings in a local SQLite artifact
@@ -27,10 +28,13 @@ The current default runtime direction is Ollama on Windows, with `local_llm` own
 
 `mirai` remains the source of truth for MCP contracts, safety constraints, and provider-agnostic runtime seams.
 
+`local_llm` should treat smaller local models as bounded workflow participants, not as the ceiling for `mirai`'s harness. A local model may be good enough for scoped planner/drafter work while a stronger hosted model remains the right escalation path for broader planning, multi-note synthesis, or larger-context reasoning. Evidence captured here should help `mirai` route work by named capability rather than by raw model size alone.
+
 This repository should focus on:
 - local runtime setup and repeatable developer workflows
 - provider experiments and comparison notes
 - small integration slices that can later be consumed by `mirai`
+- capability evidence and failure fixtures that support future request/session-level model selection in `mirai`
 
 This repository should not redefine `mirai` request/response contracts. Any contract changes should be planned in `mirai` first.
 
@@ -58,6 +62,8 @@ This keeps the runtime path simple on Windows while preserving Linux-oriented to
 The current baseline models are:
 - planner/chat: `qwen3:8b`
 - embeddings: `all-minilm`
+
+These are workstation baselines, not durable contract defaults. As larger local models such as `qwen3:14b` are evaluated, record the model name, runtime settings, capability under test, latency envelope, and failure mode so `mirai` can later choose models per workflow run or stage.
 
 Configuration lives in `config/ollama.env.example`. Copy it to `config/ollama.env` only if you need workstation-specific overrides.
 
@@ -116,6 +122,12 @@ The workflow edit-intent smoke path validates only the local provider boundary n
 - `edit_intent.operation` must be `replace_content`
 - `edit_intent.content` must be a string suitable for full-note replacement
 - failure interpretation stays local to runtime/provider evidence; it does not assert `mirai` endpoint error envelopes
+
+When comparing local models, keep smoke assertions tied to capabilities rather than broad model quality:
+- `strict_json_edit_intent`: returns a valid top-level `edit_intent` object without prose wrappers
+- `single_note_edit`: preserves the requested markdown path and emits bounded content for one note
+- `multi_step_planning`: returns the current planner JSON action shape for short, scoped intents
+- `large_context_synthesis`: should remain an escalation capability until fixtures show a local model can handle it reliably
 
 The workflow failure fixture check validates only local ownership expectations for planner and draft failures:
 - planner and drafter failures stay scoped to local `category`, `boundary`, and `owner` summaries
