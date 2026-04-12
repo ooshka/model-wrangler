@@ -1,35 +1,55 @@
-# Tech Debt Log
+# Tech Debt
 
-## Active structural debt
+This file tracks current, unresolved technical debt that still affects planning or sequencing.
+It is not intended to be a historical journal of every past planning discussion.
 
-1. Local provider contracts are documented but not exercised by retrieval code yet
-- Impact: the repo now has the right planning notes, but the eventual retrieval implementation could still drift if persistence, ranking, and adapter seams are not kept narrow.
-- Trigger: becomes risky as soon as retrieval code lands or multiple local retrieval experiments appear.
-- Planned handling: keep the first implementation focused on the existing provider artifact contract and avoid backend-specific contract leakage.
+## Current Debt
 
-2. Reusable parity evidence is still missing across retrieval and planner seams
-- Impact: the repo now has benchmark, reranker, and planner smoke evidence, but follow-on `mirai` provider work would still rely on one-off command output instead of reusable local expectations.
-- Trigger: active now that the next likely cross-repo handoff is planner/provider wiring rather than baseline capability proof.
-- Planned handling: add one bounded parity-fixture pack plus validation helpers that capture retrieval artifact expectations, planner JSON structural expectations, and key failure categories.
+### Retrieval Contract Coverage
+- State: retrieval artifact expectations are documented, but the repo still lacks enough executable contract coverage to ensure later retrieval changes cannot drift silently.
+- Impact: `mirai` handoff work would rely too much on prose contracts and one-off checks instead of durable verification.
+- Trigger to fix: active now that retrieval contract exerciser work is near the top of the backlog.
+- Likely next slice: `Local Retrieval Contract Exerciser`.
 
-3. ANN upgrade threshold is documented but not yet exercised against broader representative note sets
-- Impact: the repo has an initial benchmark threshold, but future growth could still outpace the current single-fixture evidence if note volume or chunk variety changes materially.
-- Trigger: becomes relevant when repeated representative runs move beyond the current project-owned benchmark fixture or when the next retrieval implementation slice starts stressing artifact size/latency bounds.
-- Planned handling: keep the current threshold guidance as the baseline and revisit broader benchmark coverage only when corpus growth or `mirai` handoff pressure makes the single-fixture evidence insufficient.
+### Local Workflow Reliability Evidence
+- State: the repo has baseline planner and `edit_intent` smoke coverage, but reliability beyond the happy-path smoke remains under-specified.
+- Impact: future `mirai` provider work could over-trust limited runtime evidence for malformed, near-miss, or prompt-drift scenarios.
+- Trigger to fix: before deeper workflow provider routing or stronger local-model claims are made.
+- Likely next slice: `Local Workflow Draft Reliability Fixture Pack`.
 
-4. Planner reliability beyond single-smoke coverage is still unproven locally
-- Impact: one successful structured-output smoke path does not yet establish behavior across varied intents, larger contexts, or fallback scenarios.
-- Trigger: becomes important once `mirai` adapter work or parity-fixture work is about to begin.
-- Planned handling: keep the current planner JSON smoke as the baseline proof, then add the bounded workflow failure fixture pack for planner/drafter ownership before any broader reliability expansion.
+### Planner Action Shape Alignment
+- State: `mirai` now allows a smaller internal planner-side semantic draft action before normalizing back to canonical `workflow.draft_patch`, but `local_llm` does not yet explicitly track or validate that shape.
+- Impact: planner prompts, docs, or fixtures here could drift from the planner-side contract `mirai` is now prepared to normalize.
+- Trigger to fix: when touching planner prompts, fixtures, or planner capability evidence next.
+- Likely next slice: `Local Planner Action Shape Alignment Note Or Fixture`.
 
-5. Windows host bootstrap is still manual
-- Impact: initial agent validation depends on Ollama being installed, running, and preloaded with the baseline models outside the repo.
-- Trigger: when a fresh workstation or CI-like environment needs to reproduce the local baseline without prior host setup.
-- Planned handling: consider a small host setup note or helper script once the first Ollama baseline smoke path is stable.
+### Model Capability Evidence Depth
+- State: current smoke coverage proves baseline planner/drafter behavior, but it does not yet give a reusable capability matrix for choosing local models by named `mirai` capability.
+- Impact: later model/profile routing decisions would still lean too heavily on anecdotal runs or raw model size assumptions.
+- Trigger to fix: when `mirai` is ready to consume more explicit local capability evidence.
+- Likely next slice: `Local Workflow Model Capability Matrix`.
 
-## 2026-04-08 (workflow edit-intent planning pass)
+### Windows Host Bootstrap
+- State: workstation bring-up still depends on manual host-side Ollama setup outside the repo.
+- Impact: fresh-machine setup remains more fragile than the project’s WSL-side tooling implies.
+- Trigger to fix: when another workstation needs reproducible bring-up or local onboarding friction becomes material.
+- Likely next slice: `Windows Host Bootstrap Note Or Helper`.
 
-1. Local workflow edit-intent evidence is still missing after the `mirai` contract pivot
-- Impact: `mirai` now owns a strict `edit_intent` draft contract, but this repo still documents and exercises the older unified-diff draft path, leaving the next self-hosted drafter handoff without current runtime evidence.
-- Trigger: active now that `mirai` has merged the `edit_intent` contract and the next local-provider slice needs contract-shaped JSON proof rather than patch-text experiments.
-- Planned handling: replace the current draft smoke with one bounded `edit_intent` smoke path, then add a small reliability fixture pack if prompt/output drift remains an issue.
+## Watchlist
+
+### Benchmark Threshold Drift
+- Current ANN upgrade thresholds are documented from a limited baseline.
+- If corpus size, chunk diversity, or representative latency changes materially, revisit the benchmark evidence before assuming the current exact-SQLite path still fits.
+
+### Retrieval Implementation Scope
+- Keep the first local retrieval implementation narrow and contract-led.
+- If provider-specific behavior starts leaking into storage, ranking, or response shaping, pause and reassert the contract boundary before expanding features.
+
+### Fixture Sprawl
+- Planner, retrieval, failure, and capability fixtures are all useful here, but they can sprawl quickly.
+- If fixture count grows substantially, standardize naming/location/ownership rather than letting prompts, docs, and tests fragment.
+
+## Recently Resolved
+
+- Local workflow `edit_intent` smoke coverage now matches `mirai`’s current single-note draft contract instead of the older unified-diff assumption.
+- Local planner, retrieval parity, and workflow failure fixtures are now present enough to support narrower next-step evidence work instead of baseline runtime bring-up.
