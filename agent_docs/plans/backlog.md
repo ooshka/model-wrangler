@@ -21,6 +21,11 @@ No currently tracked items.
 - Value: records runnable smoke evidence for local workflow models by named `mirai` capability, so later `mirai` model/profile routing can choose a local model for the safe subset without relying on raw model size.
 - Size: ~1 day.
 
+4. Local Planner Action Shape Alignment Note Or Fixture
+- Type: `hardening`
+- Value: tracks the new `mirai` planner-side semantic `draft_note` action shape so local planner prompts, notes, or fixtures do not drift from the contract that `mirai` now normalizes server-side into canonical `workflow.draft_patch` actions.
+- Size: ~0.5 day.
+
 ## Later
 
 1. Windows Host Bootstrap Note Or Helper
