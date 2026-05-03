@@ -1,55 +1,69 @@
-# Roadmap (Lightweight)
+# Roadmap
 
-## Project Summary (North Star + Boundaries)
+## North Star
 
-This project is the local-model proving ground for `mirai`'s self-hosted provider phase and future multi-model workflow routing. The near-term goal is not broad model experimentation; it is a reproducible local stack for RAG and planning workflows that preserves `mirai`'s existing provider seams, contract discipline, and capability-based model policy.
+`local_llm` is the local-model proving ground for `mirai`'s self-hosted provider phase. Its job is not broad model experimentation; it should produce runnable evidence about which local runtime, retrieval, and workflow-generation paths can satisfy named `mirai` capabilities without redefining `mirai` contracts.
 
-High-level goal:
-- Deliver an Ollama-based local workflow for embeddings and planner-style generation that can later plug into `mirai` without changing MCP endpoint semantics, while producing evidence about which local models are suitable for each workflow capability.
+## Current Milestone
 
-Project boundaries:
-- Preserve `mirai` as the owner of MCP contracts, safety policy, and endpoint semantics.
-- Keep retrieval and planner/drafter model concerns as separate provider seams, matching the current `mirai` architecture.
-- Treat local model size as an input to capability evidence, not as a public contract. Prefer recording whether a model supports capabilities such as strict JSON edit intents, single-note edits, or multi-step planning under bounded context.
-- Favor small vertical slices that produce runnable artifacts over broad comparison docs or premature abstraction.
-- Prefer runnable evidence that directly unblocks `mirai`'s next execution or retrieval slice over standalone support notes when the uncertainty can be captured in fixtures or smoke paths.
-- Defer default-provider decisions in `mirai` until local parity expectations and failure behavior are documented here.
+### Self-Hosted Provider Confidence
 
-## Delivery Path
+Outcome: `local_llm` has enough executable retrieval, workflow, failure, and capability evidence for `mirai` to make concrete local-provider routing decisions without guessing from one-off smoke runs or prose-only notes.
 
-1. Ollama local provider baseline
-- Stand up a repeatable Ollama workflow on the target workstation, with the runtime hosted on Windows and repo tooling kept in WSL2.
-- Prove one chat/generation model and one embedding model can be invoked through stable local commands and documented config.
+Exit criteria:
+- [ ] Local retrieval artifact expectations are covered by a runnable contract exerciser that validates shape, metadata, ranking assumptions, and failure interpretation owned by `local_llm`.
+- [ ] Workflow edit-intent reliability has fixture coverage for malformed and near-miss local model responses without requiring live prompt guesswork.
+- [ ] A capability matrix records model/runtime evidence for at least `strict_json_edit_intent`, `single_note_edit`, and `multi_step_planning`.
+- [ ] Planner-side action-shape evidence tracks the current `mirai` semantic draft action shape before normalization to canonical `workflow.draft_patch`.
+- [ ] The README or testing guide identifies which evidence is ready for `mirai` consumption and which claims remain unproven.
 
-2. Embeddings-first RAG foundation
-- Add a small local embeddings path aligned with `mirai`'s semantic retrieval seam.
-- Capture chunking, request shape, and artifact expectations needed for later retrieval parity work.
+## Milestone Ladder
 
-3. Planner/drafter model baseline
-- Add a planner-oriented local generation path that can return strict JSON for orchestration-style outputs.
-- Record model sizing and latency tradeoffs on the target hardware for bounded-context use.
-- Pivot draft generation away from model-authored unified diffs toward a strict `edit_intent` JSON response that mirrors the `mirai` contract once that contract is defined.
-- Capture model-profile evidence for likely `mirai` gates such as `strict_json_edit_intent`, `single_note_edit`, and `multi_step_planning` without implying every local model should receive every workflow action.
+1. Runtime Baseline
+- Owner: `local_llm`
+- Purpose: establish repeatable Ollama-on-Windows, WSL2 tooling, chat/generation, embeddings, and smoke commands.
+- Exit: baseline model names, host/WSL networking, config, and smoke paths are documented and runnable.
 
-4. Retrieval quality shaping
-- Start with an exact local retrieval baseline using persisted embeddings and simple in-process ranking.
-- Evaluate ANN/vector-index upgrades only after the exact baseline is working and measured against local workflow latency needs.
-- Keep evaluation criteria tied to `mirai` retrieval contracts: bounded inputs, deterministic fallback, and inspectable result metadata.
+2. Retrieval Contract Evidence
+- Owner: `local_llm`
+- Purpose: prove local retrieval artifacts can support `mirai`'s provider seam without silently drifting in shape, ranking, or failure behavior.
+- Exit: retrieval contract exerciser and fixtures produce deterministic pass/fail evidence.
 
-5. Parity fixtures and failure contracts
-- Build reusable prompt/retrieval fixtures that compare local-provider outputs against the current OpenAI-backed shapes.
-- Prefer executable failure fixtures over prose-only notes when `mirai` needs bounded evidence about unavailable, overloaded, or malformed local runtime behavior.
-- Keep fixtures useful for later request/session-level model selection by recording the model name, provider endpoint, capability under test, and expected failure interpretation.
+3. Workflow Capability Evidence
+- Owner: `local_llm`
+- Purpose: measure local workflow models by named `mirai` capabilities rather than raw model size.
+- Exit: capability matrix and fixture pack identify which local models can safely handle bounded planner/drafter stages and which require hosted escalation.
 
-6. `mirai` integration handoff
-- Convert validated local stack decisions into narrow `mirai` cases for provider wiring.
-- Keep integration slices small: retrieval seam first, planner seam second, workflow edit-intent evidence before any local draft/apply defaulting, model/profile selection only after capability evidence exists, and defaults only after parity evidence exists.
+4. Integration Handoff
+- Owner: `local_llm`, consumed by `mirai`
+- Purpose: convert local-provider evidence into concrete `mirai` provider wiring and profile-routing decisions.
+- Exit: `mirai` can cite local retrieval/workflow fixtures and capability evidence when implementing local provider profiles.
 
-## Near-Term Success Criteria
+## Cross-Repo Contract
 
-- A documented Ollama setup runs locally with the expected model names, host/WSL split, and hardware assumptions.
-- The repo contains a repeatable smoke path for local embeddings and planner-style generation calls.
-- The next workflow-output slice proves the local model can return contract-shaped `edit_intent` JSON more reliably than unified diff text for the bounded note-update seam.
-- Local smoke and fixture outputs identify which model/profile was exercised and which `mirai` capability gate it supports or fails.
-- The next few slices should leave behind runnable evidence that `mirai` can consume directly, not just explanatory notes.
-- Roadmap follow-ons are feature-led: local provider capability first, hardening and parity checks immediately after.
+- `mirai` owns MCP/API contracts, safety policy, workflow semantics, provider/profile policy, audit shape, and product behavior.
+- `local_llm` owns local runtime setup, smoke paths, retrieval artifacts, model capability evidence, and provider-side failure interpretation.
+- Handoff rule: do not change `mirai` endpoint semantics here; produce evidence and fixtures that let `mirai` make the contract or routing decision.
+- Capability rule: record model name, runtime endpoint/settings, capability under test, latency envelope when relevant, output shape, and failure mode.
+
+## Next Slices
+
+1. Local Retrieval Contract Exerciser
+- Repo: `local_llm`
+- Advances: Self-Hosted Provider Confidence and Retrieval Contract Evidence
+- Why next: the retrieval artifact contract is documented, but later local retrieval work still needs executable drift protection.
+
+2. Local Workflow Draft Reliability Fixture Pack
+- Repo: `local_llm`
+- Advances: Self-Hosted Provider Confidence and Workflow Capability Evidence
+- Why next: happy-path edit-intent smoke exists, but malformed and near-miss local outputs need reusable fixture coverage before `mirai` relies on the local drafter.
+
+3. Local Workflow Model Capability Matrix
+- Repo: `local_llm`
+- Advances: Workflow Capability Evidence and Integration Handoff
+- Why next: `mirai` needs capability-level evidence for profile routing; raw model size and anecdotal smoke results are not enough.
+
+4. Local Planner Action Shape Alignment Note Or Fixture
+- Repo: `local_llm`
+- Advances: Integration Handoff
+- Why next: `mirai` now supports a smaller semantic planner action before canonical normalization, and local prompts/fixtures should not drift from that boundary.

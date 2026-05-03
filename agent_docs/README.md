@@ -5,8 +5,9 @@ Lightweight planning artifacts for incremental, agent-executable work in `local_
 ## Structure
 - `cases/`: executable case files
 - `contracts/`: local provider contract notes used before `mirai` adapter work
-- `plans/backlog.md`: prioritized candidate slices
-- `plans/roadmap.md`: short directional roadmap
+- `plans/roadmap.md`: north star, current milestone, exit criteria, milestone ladder, and strategic next slices
+- `plans/backlog.md`: short tactical queue aligned to the current roadmap milestone
+- `plans/tech_debt_log.md`: structural debt and refactor signals
 - `testing/README.md`: testing infrastructure and verification commands for agents
 
 Current contract note:
